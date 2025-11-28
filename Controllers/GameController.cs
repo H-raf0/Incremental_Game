@@ -85,6 +85,12 @@ namespace GameServerApi.Controllers
                 return BadRequest(new ErrorResponse("Not enough clicks to reset", "INSUFFICIENT_CLICKS"));
             }
 
+            // update personal best score if current count is higher
+            if (progression.Count > progression.BestScore)
+            {
+                progression.BestScore = progression.Count;
+            }
+
             // Update global best score if current count is higher
             if (progression.Count > GlobalScore.BestScore)
             {

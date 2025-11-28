@@ -13,6 +13,7 @@ public class Progression
     public int UserId { get; set; }
     public int Count { get; set; }
     public int Multiplier { get; set; }
+    public int BestScore { get; set; }
 
     // ?
     public Progression(int userId)
@@ -20,6 +21,7 @@ public class Progression
         UserId = userId;
         Count = 0;
         Multiplier = 1;
+        BestScore = 0;
     }
 
     public int CalculateResetCost()
