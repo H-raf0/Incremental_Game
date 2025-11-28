@@ -11,7 +11,6 @@ namespace GameServerApi.Controllers
         [HttpGet("Seed")]
         public async Task<ActionResult<bool>> SeedInventory()
         {
-            /*
             try
             {
                 _context.Items.RemoveRange(_context.Items);
@@ -34,10 +33,24 @@ namespace GameServerApi.Controllers
             catch
             {
                 return false;
-            }*/
+            }
             return Ok(true);
         }
 
 
+
+
+
+        //GET /api/Inventory/UserInventory/{userId}
+
+        [HttpGet("UserInventory/{userId}")]
+        public async Task<ActionResult<InventoryEntry[]>> UserInventory(int userId)
+        {
+            var inventory = await _context.InventoryEntries
+                .Where(i => i.UserId == userId)
+                .ToArrayAsync();
+
+            return Ok(inventory);
+        }
     }
 }
