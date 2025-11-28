@@ -5,12 +5,35 @@ using Scalar.AspNetCore;
 using GameServerApi.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Sqlite;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.Security.Claims;
 
 public class Program
 {
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        builder.Services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ClockSkew = TimeSpan.FromMinutes(10), // Temps de tolérance pour la date d'expiration
+                    ValidateLifetime = true, // Vérifie la date d'expiration
+                    ValidateIssuerSigningKey = true, // Vérifie la signature
+                    ValidAudience = "localhost:5000", // Qui peut utiliser le token ici c'est notre API
+                    ValidIssuer = "localhost:5000", // Qui émet le token ici c'est notre API
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes("TheSecretKeyThatShouldBeStoredInTheConfiguration")
+                    ),
+                    RoleClaimType = ClaimTypes.Role // Dans quel claim est stocké le role
+                };
+            });
+        builder.Services.AddAuthorization();
 
         // Add services to the container.
 
@@ -42,10 +65,10 @@ public class Program
             app.MapScalarApiReference();
         }
 
+        app.UseAuthentication();
         app.UseAuthorization();
         app.UseCors("AllowAll");
         // app.UseCors("AllowSpecificOrigin");
-
 
         app.MapControllers();
 
