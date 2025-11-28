@@ -292,5 +292,5 @@ __pycache__/
 # my project useless files
 bin/
 obj/
-User.db
-Progression.db
+
+#User.db
