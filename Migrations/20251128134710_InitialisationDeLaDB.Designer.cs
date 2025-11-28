@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace GameServerApi.Migrations
 {
-    [DbContext(typeof(UserContext))]
-    [Migration("20251121183853_InitialisationDeLaDB")]
+    [DbContext(typeof(ApplicationDbContext))]
+    [Migration("20251128134710_InitialisationDeLaDB")]
     partial class InitialisationDeLaDB
     {
         /// <inheritdoc />
@@ -19,10 +19,57 @@ namespace GameServerApi.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.11");
 
+            modelBuilder.Entity("GameServerApi.Models.InventoryEntry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("InventoryEntries");
+                });
+
+            modelBuilder.Entity("GameServerApi.Models.Item", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ClickValue")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MaxQuantity")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Items");
+                });
+
             modelBuilder.Entity("Progression", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BestScore")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Count")

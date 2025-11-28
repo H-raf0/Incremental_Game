@@ -11,6 +11,37 @@ namespace GameServerApi.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "InventoryEntries",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<int>(type: "INTEGER", nullable: false),
+                    ItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    Quantity = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InventoryEntries", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Items",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    Price = table.Column<int>(type: "INTEGER", nullable: false),
+                    MaxQuantity = table.Column<int>(type: "INTEGER", nullable: false),
+                    ClickValue = table.Column<int>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Items", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
@@ -33,7 +64,8 @@ namespace GameServerApi.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     UserId = table.Column<int>(type: "INTEGER", nullable: false),
                     Count = table.Column<int>(type: "INTEGER", nullable: false),
-                    Multiplier = table.Column<int>(type: "INTEGER", nullable: false)
+                    Multiplier = table.Column<int>(type: "INTEGER", nullable: false),
+                    BestScore = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -55,6 +87,12 @@ namespace GameServerApi.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "InventoryEntries");
+
+            migrationBuilder.DropTable(
+                name: "Items");
+
             migrationBuilder.DropTable(
                 name: "Progressions");
 
