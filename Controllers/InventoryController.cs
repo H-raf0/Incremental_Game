@@ -67,12 +67,75 @@ namespace GameServerApi.Controllers
             }
         }
 
+        //GET /api/Inventory/Items
+        [HttpGet("Items")]
+        public async Task<ActionResult<Item[]>> GetAllItems()
+        {
+            var items = await _context.Items.ToArrayAsync();
+            if(items == null || items.Length == 0)
+            {
+                return NotFound(new ErrorResponse("No items found", "NO_ITEMS"));
+            }
+            return Ok(items);
+        }
 
+        //POST /api/Inventory/Buy/{userId}/{itemId}
+        [HttpPost("Buy/{userId}/{itemId}")]
+        public async Task<ActionResult<InventoryEntry>> BuyItem(int userId, int itemId)
+        {
+            // Verify user exists
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return BadRequest(new ErrorResponse("User not found", "USER_NOT_FOUND"));
+            }
+            
+            // Verify progression
+            var progression = await _context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (progression == null)
+            {
+                return BadRequest(new ErrorResponse("User not found", "USER_NOT_FOUND"));
+            }
 
+            // Verify item exists
+            var item = await _context.Items.FindAsync(itemId);
+            if (item == null)
+            {
+                return BadRequest(new ErrorResponse("Item not found", "ITEM_NOT_FOUND"));
+            }
 
+            // Check funds
+            if (progression.Count < item.Price)
+            {
+                return BadRequest(new ErrorResponse("Not enough money to buy the item", "NOT_ENOUGH_MONEY"));
+            }
+
+            var inventoryEntry = await _context.InventoryEntries
+                .FirstOrDefaultAsync(i => i.UserId == userId && i.ItemId == itemId);
+
+            if (inventoryEntry != null)
+            {
+                if (inventoryEntry.Quantity >= item.MaxQuantity)
+                {
+                    return BadRequest(new ErrorResponse("Inventory is full", "INVENTORY_FULL"));
+                }
+
+                inventoryEntry.Quantity += 1;
+            }
+            else
+            {
+                inventoryEntry = new InventoryEntry(userId, itemId, 1);
+                _context.InventoryEntries.Add(inventoryEntry);
+            }
+
+            // Deduct price from user's progression (currency)
+            progression.Count -= item.Price;
+
+            await _context.SaveChangesAsync();
+            return Ok(inventoryEntry);
+        }
 
         //GET /api/Inventory/UserInventory/{userId}
-
         [HttpGet("UserInventory/{userId}")]
         public async Task<ActionResult<InventoryEntry[]>> UserInventory(int userId)
         {
