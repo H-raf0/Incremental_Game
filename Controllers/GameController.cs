@@ -91,13 +91,6 @@ namespace GameServerApi.Controllers
                 progression.BestScore = progression.Count;
             }
 
-            // Update global best score if current count is higher
-            if (progression.Count > GlobalScore.BestScore)
-            {
-                GlobalScore.BestScore = progression.Count;
-                GlobalScore.UserId = userId;
-            }
-
             // Apply reset
             progression.Count = 0;
             progression.Multiplier++;
@@ -130,7 +123,7 @@ namespace GameServerApi.Controllers
 
         // GET /api/Game/Click/{userId}
         [HttpGet("Click/{userId}")]
-        public async Task<ActionResult<object>> Click(int userId)
+        public async Task<ActionResult<ClickResponse>> Click(int userId)
         {
             var progression = await _context.Progressions
                 .FirstOrDefaultAsync(p => p.UserId == userId);
@@ -149,15 +142,20 @@ namespace GameServerApi.Controllers
 
         // GET /api/Game/BestScore
         [HttpGet("BestScore")]
-        public ActionResult<BestScoreResponse> GetBestScore()
+        public async Task<ActionResult<BestScoreResponse>> GetBestScore()
         {
+            var bestProgression = await _context.Progressions
+                .OrderByDescending(p => p.BestScore)
+                .FirstOrDefaultAsync();
+
+
             // Return the global best score and its owner
-            if (GlobalScore.BestScore == 0)
+            if (bestProgression == null || bestProgression.BestScore == 0)
             {
                 return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSIONS"));
             }
 
-            return Ok(new BestScoreResponse(GlobalScore.UserId, GlobalScore.BestScore));
+            return Ok(new BestScoreResponse(bestProgression.UserId, bestProgression.BestScore));
         }
 
 

@@ -2,11 +2,6 @@
 public record ResetCostResponse(int Cost);
 public record ClickResponse(int Count, int Multiplier);
 public record BestScoreResponse(int UserId, int BestScore);
-public class GlobalScore
-{
-    public static int UserId { get; set; } = 0;
-    public static int BestScore { get; set; } = 0;
-}
 public class Progression
 {
     public int Id { get; set; }
