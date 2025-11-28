@@ -11,8 +11,8 @@ namespace GameServerApi.Controllers
     public class GameController : ControllerBase
     {
 
-        private readonly UserContext _context;
-        public GameController(UserContext ctx)
+        private readonly ApplicationDbContext _context;
+        public GameController(ApplicationDbContext  ctx)
         {
             _context = ctx;
         }

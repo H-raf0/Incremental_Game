@@ -1,27 +1,28 @@
 using Microsoft.EntityFrameworkCore;
 namespace GameServerApi.Models;
 
-public class UserContext : DbContext
+public class ApplicationDbContext : DbContext
 {
-    public UserContext(DbContextOptions<UserContext> options)
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        // Connexion a la base sqlite
-        options.UseSqlite("Data Source=User.db");
+        options.UseSqlite("Data Source=ProjectDB.db");
     }
 
+    // All DbSets in one place
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<Progression> Progressions { get; set; } = null!;
+    public DbSet<Item> Items { get; set; } = null!;
+    public DbSet<InventoryEntry> InventoryEntries { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure cascade delete: when a User is deleted, its Progressions are deleted too
         modelBuilder.Entity<Progression>()
             .HasOne<User>()
             .WithMany()
