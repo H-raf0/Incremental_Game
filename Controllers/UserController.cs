@@ -4,20 +4,24 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 
 using GameServerApi.Models;
 
 namespace GameServerApi.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
     {
 
         private readonly ApplicationDbContext _context;
-        public UserController(ApplicationDbContext ctx)
+        private readonly JwtService _jwtService;
+        public UserController(ApplicationDbContext ctx, JwtService jwtService)
         {
             _context = ctx;
+            _jwtService = jwtService;
         }
 
         // GET: api/<UserController>/All
@@ -83,7 +87,8 @@ namespace GameServerApi.Controllers
 
         // POST api/<UserController>
         [HttpPost("Register")]
-        public async Task<ActionResult<UserPublic>> RegisterUser([FromBody] UserPass newUser)
+        [AllowAnonymous]
+        public async Task<ActionResult<dynamic>> RegisterUser([FromBody] UserPass newUser)
         {
             // Check if username already exists
             bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
@@ -114,10 +119,13 @@ namespace GameServerApi.Controllers
                 _context.Progressions.Add(progression);
                 await _context.SaveChangesAsync();
 
-                // Return 201 Created
+                // Generate JWT token
+                var token = _jwtService.GenerateToken(user);
+
+                // Return 201 Created with token
                 return CreatedAtAction(nameof(GetUserById),
                     new { id = user.Id },
-                    new UserPublic(user.Id, user.Username, user.Role));
+                    new { token = token, user = new UserPublic(user.Id, user.Username, user.Role) });
             }
             catch
             {
@@ -132,7 +140,8 @@ namespace GameServerApi.Controllers
 
         // POST api/<UserController>
         [HttpPost("Login")]
-        public async Task<ActionResult<UserPublic>> Login([FromBody] UserPass userPass)
+        [AllowAnonymous]
+        public async Task<ActionResult<dynamic>> Login([FromBody] UserPass userPass)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == userPass.Username);
@@ -147,10 +156,11 @@ namespace GameServerApi.Controllers
                 return Unauthorized(new ErrorResponse("invalid password", "INVALID_PASSWORD"));
             }
 
+            // Generate JWT token
+            var token = _jwtService.GenerateToken(user);
 
-            // si tout est bon, on retourne les infos publiques
-            var userPublic = new UserPublic(user.Id, user.Username, user.Role);
-            return Ok(userPublic);
+            // Return token with user info
+            return Ok(new { token = token, user = new UserPublic(user.Id, user.Username, user.Role) });
         }
 
 
@@ -158,6 +168,7 @@ namespace GameServerApi.Controllers
 
         // PUT api/<UserController>/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<User>> UpdateUser(int id, [FromBody] UserUpdate userUpdate)
         {
             // Check if the user exists
@@ -197,6 +208,7 @@ namespace GameServerApi.Controllers
 
         // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult> DeleteUser(int id)
         {
             // Rechercher l'utilisateur par son ID
