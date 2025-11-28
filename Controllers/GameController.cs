@@ -95,6 +95,11 @@ namespace GameServerApi.Controllers
             progression.Count = 0;
             progression.Multiplier++;
 
+
+            // vider la db
+            var inventoryEntries = _context.InventoryEntries.Where(i => i.UserId == userId);
+            _context.InventoryEntries.RemoveRange(inventoryEntries);
+
             await _context.SaveChangesAsync();
 
             return Ok(progression);
@@ -133,7 +138,17 @@ namespace GameServerApi.Controllers
                 return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
             }
 
-            progression.Count += 1 * progression.Multiplier;
+            // valeur ajouter des equipements
+            var inventoryEntries = await _context.InventoryEntries
+                .Where(i => i.UserId == userId)
+                .ToListAsync();
+            int bonus = inventoryEntries.Sum(entry =>
+            {
+                var item = _context.Items.Find(entry.ItemId);
+                return item != null ? item.ClickValue * entry.Quantity : 0;
+            });
+
+            progression.Count += progression.Multiplier + bonus;
 
             await _context.SaveChangesAsync();
 
