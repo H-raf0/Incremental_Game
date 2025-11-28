@@ -293,4 +293,4 @@ __pycache__/
 bin/
 obj/
 
-#User.db
+*.db
