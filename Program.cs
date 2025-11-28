@@ -18,7 +18,7 @@ public class Program
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
 
-        builder.Services.AddDbContext<UserContext>();
+        builder.Services.AddDbContext<ApplicationDbContext>();
 
         builder.Services.AddScoped<PasswordHasher<User>>();
 
