@@ -294,3 +294,7 @@ bin/
 obj/
 
 #User.db
+# User-specific files (MonoDevelop/Xamarin Studio)
+
+*.db
+*.asc
