@@ -23,6 +23,16 @@ namespace GameServerApi.Controllers
             _context = ctx;
         }
 
+        private int? GetUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return null;
+            }
+            return userId;
+        }
+
         // GET /api/Inventory/Seed
         [HttpGet("Seed")]
         [AllowAnonymous]
@@ -84,20 +94,25 @@ namespace GameServerApi.Controllers
             return Ok(items);
         }
 
-        //POST /api/Inventory/Buy/{userId}/{itemId}
-        [HttpPost("Buy/{userId}/{itemId}")]
-        [Authorize]
-        public async Task<ActionResult<InventoryEntry>> BuyItem(int userId, int itemId)
+        //POST /api/Inventory/Buy/{itemId}
+        [HttpPost("Buy/{itemId}")]
+        public async Task<ActionResult<InventoryEntry>> BuyItem(int itemId)
         {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            }
+
             // Verify user exists
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _context.Users.FindAsync(userId.Value);
             if (user == null)
             {
                 return BadRequest(new ErrorResponse("User not found", "USER_NOT_FOUND"));
             }
             
             // Verify progression
-            var progression = await _context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId);
+            var progression = await _context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId.Value);
             if (progression == null)
             {
                 return BadRequest(new ErrorResponse("User not found", "USER_NOT_FOUND"));
@@ -117,7 +132,7 @@ namespace GameServerApi.Controllers
             }
 
             var inventoryEntry = await _context.InventoryEntries
-                .FirstOrDefaultAsync(i => i.UserId == userId && i.ItemId == itemId);
+                .FirstOrDefaultAsync(i => i.UserId == userId.Value && i.ItemId == itemId);
 
             if (inventoryEntry != null)
             {
@@ -130,7 +145,7 @@ namespace GameServerApi.Controllers
             }
             else
             {
-                inventoryEntry = new InventoryEntry(userId, itemId, 1);
+                inventoryEntry = new InventoryEntry(userId.Value, itemId, 1);
                 _context.InventoryEntries.Add(inventoryEntry);
             }
 
@@ -143,13 +158,18 @@ namespace GameServerApi.Controllers
             return Ok(inventoryEntry);
         }
 
-        //GET /api/Inventory/UserInventory/{userId}
-        [HttpGet("UserInventory/{userId}")]
+        //GET /api/Inventory/UserInventory
+        [HttpGet("UserInventory")]
         [Authorize]
-        public async Task<ActionResult<InventoryEntry[]>> UserInventory(int userId)
+        public async Task<ActionResult<InventoryEntry[]>> UserInventory()
         {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            }
             var inventory = await _context.InventoryEntries
-                .Where(i => i.UserId == userId)
+                .Where(i => i.UserId == userId.Value)
                 .ToArrayAsync();
 
             return Ok(inventory);
