@@ -65,7 +65,8 @@ namespace GameServerApi.Migrations
                     UserId = table.Column<int>(type: "INTEGER", nullable: false),
                     Count = table.Column<int>(type: "INTEGER", nullable: false),
                     Multiplier = table.Column<int>(type: "INTEGER", nullable: false),
-                    BestScore = table.Column<int>(type: "INTEGER", nullable: false)
+                    BestScore = table.Column<int>(type: "INTEGER", nullable: false),
+                    totalClickValue = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {

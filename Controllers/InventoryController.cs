@@ -136,6 +136,8 @@ namespace GameServerApi.Controllers
 
             // Deduct price from user's progression (currency)
             progression.Count -= item.Price;
+            
+            progression.totalClickValue += item.ClickValue;
 
             await _context.SaveChangesAsync();
             return Ok(inventoryEntry);

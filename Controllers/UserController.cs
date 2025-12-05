@@ -74,7 +74,7 @@ namespace GameServerApi.Controllers
 
         // GET: api/<UserController>/AllAdmin
         [HttpGet("AllAdmin")]
-        [Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<UserPublic>>> GetAllAdminUsers()
         {
             // Get all users with Role.ADMIN
@@ -172,7 +172,7 @@ namespace GameServerApi.Controllers
 
         // PUT api/<UserController>/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<User>> UpdateUser(int id, [FromBody] UserUpdate userUpdate)
         {
             // Check if the user exists
@@ -212,7 +212,7 @@ namespace GameServerApi.Controllers
 
         // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]
-        [Authorize(Roles = "ADMIN")]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult> DeleteUser(int id)
         {
             // Rechercher l'utilisateur par son ID

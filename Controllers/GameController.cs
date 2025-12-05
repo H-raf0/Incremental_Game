@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
 using GameServerApi.Models;
+using System.Numerics;
 
 namespace GameServerApi.Controllers
 {
@@ -32,12 +33,16 @@ namespace GameServerApi.Controllers
         }
 
 
-        // GET /api/Game/Initialize/{userId}
-        [HttpGet("Initialize/{userId}")]
+        // GET /api/Game/Initialize
+        [HttpGet("Initialize")]
         [Authorize]
-        public async Task<ActionResult<Progression>> InitializeProgression(int userId)
+        public async Task<ActionResult<Progression>> InitializeProgression()
         {  // initialization is done in UserController when creating user so what is the point of this ? 
-
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            }
             bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
             if (exists)
             {
@@ -49,7 +54,7 @@ namespace GameServerApi.Controllers
 
             try
             {
-                var progression = new Progression(userId);
+                var progression = new Progression(userId.Value);
                 _context.Progressions.Add(progression);
                 await _context.SaveChangesAsync();
                 return Ok(progression);
@@ -87,11 +92,17 @@ namespace GameServerApi.Controllers
             return Ok(progression);
         }
 
-        // POST /api/Game/Reset/{userId}
-        [HttpPost("Reset/{userId}")]
+        // POST /api/Game/Reset
+        [HttpPost("Reset")]
         [Authorize]
-        public async Task<ActionResult<Progression>> ResetProgression(int userId)
+        public async Task<ActionResult<Progression>> ResetProgression()
         {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            }
+
             // The progression is linked to user by UserId, not by primary key
             var progression = await _context.Progressions
                 .FirstOrDefaultAsync(p => p.UserId == userId);
@@ -116,6 +127,7 @@ namespace GameServerApi.Controllers
 
             // Apply reset
             progression.Count = 0;
+            progression.totalClickValue = 0;
             progression.Multiplier++;
 
 
@@ -130,13 +142,19 @@ namespace GameServerApi.Controllers
 
 
 
-        // GET /api/Game/ResetCost/{userId}
-        [HttpGet("ResetCost/{userId}")]
+        // GET /api/Game/ResetCost
+        [HttpGet("ResetCost")]
         [Authorize]
-        public async Task<ActionResult<int>> ResetCost(int userId)
+        public async Task<ActionResult<int>> ResetCost()
         {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            }
+
             var progression = await _context.Progressions
-                .Where(p => p.UserId == userId)
+                .Where(p => p.UserId == userId.Value)
                 .FirstOrDefaultAsync();
 
             if (progression == null)
@@ -150,30 +168,38 @@ namespace GameServerApi.Controllers
 
 
 
-        // GET /api/Game/Click/{userId}
-        [HttpGet("Click/{userId}")]
+        // GET /api/Game/Click
+        [HttpGet("Click")]
         [Authorize]
-        public async Task<ActionResult<ClickResponse>> Click(int userId)
+        public async Task<ActionResult<ClickResponse>> Click()
         {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            }
+
+            // The progression is linked to user by UserId, not by primary key
             var progression = await _context.Progressions
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+                .FirstOrDefaultAsync(p => p.UserId == userId.Value);
 
             if (progression == null)
             {
                 return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
             }
-
+            /*
             // valeur ajouter des equipements
             var inventoryEntries = await _context.InventoryEntries
                 .Where(i => i.UserId == userId)
                 .ToListAsync();
+            
             int bonus = inventoryEntries.Sum(entry =>
             {
                 var item = _context.Items.Find(entry.ItemId);
                 return item != null ? item.ClickValue * entry.Quantity : 0;
-            });
+            });*/
 
-            progression.Count += progression.Multiplier + bonus;
+            progression.Count += progression.Multiplier + progression.totalClickValue;
 
             await _context.SaveChangesAsync();
 

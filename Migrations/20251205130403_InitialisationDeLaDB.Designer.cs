@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GameServerApi.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251128134710_InitialisationDeLaDB")]
+    [Migration("20251205130403_InitialisationDeLaDB")]
     partial class InitialisationDeLaDB
     {
         /// <inheritdoc />
@@ -79,6 +79,9 @@ namespace GameServerApi.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("UserId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("totalClickValue")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
