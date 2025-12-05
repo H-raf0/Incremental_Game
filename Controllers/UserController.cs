@@ -37,6 +37,7 @@ namespace GameServerApi.Controllers
 
         // GET api/<UserController>/{id}
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<ActionResult<UserPublic>> GetUserById(int id)
         {
             var user = await _context.Users
@@ -54,6 +55,7 @@ namespace GameServerApi.Controllers
 
         // GET api/<UserController>/Search/{name}
         [HttpGet("Search/{name}")]
+        [Authorize]
         public async Task<ActionResult<IEnumerable<UserPublic>>> SearchUsers(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -71,6 +73,7 @@ namespace GameServerApi.Controllers
 
         // GET: api/<UserController>/AllAdmin
         [HttpGet("AllAdmin")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<ActionResult<IEnumerable<UserPublic>>> GetAllAdminUsers()
         {
             // Get all users with Role.ADMIN

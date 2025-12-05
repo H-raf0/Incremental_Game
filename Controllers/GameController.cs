@@ -22,6 +22,7 @@ namespace GameServerApi.Controllers
 
         // GET /api/Game/Initialize/{userId}
         [HttpGet("Initialize/{userId}")]
+        [Authorize]
         public async Task<ActionResult<Progression>> InitializeProgression(int userId)
         {  // initialization is done in UserController when creating user so what is the point of this ? 
 
@@ -53,6 +54,7 @@ namespace GameServerApi.Controllers
 
         // GET /api/Game/Progression/{userId}
         [HttpGet("Progression/{userId}")]
+        [Authorize]
         public async Task<ActionResult<Progression>> GetProgression(int userId)
         {
             var progression = await _context.Progressions
@@ -69,6 +71,7 @@ namespace GameServerApi.Controllers
 
         // POST /api/Game/Reset/{userId}
         [HttpPost("Reset/{userId}")]
+        [Authorize]
         public async Task<ActionResult<Progression>> ResetProgression(int userId)
         {
             // The progression is linked to user by UserId, not by primary key
@@ -111,6 +114,7 @@ namespace GameServerApi.Controllers
 
         // GET /api/Game/ResetCost/{userId}
         [HttpGet("ResetCost/{userId}")]
+        [Authorize]
         public async Task<ActionResult<int>> ResetCost(int userId)
         {
             var progression = await _context.Progressions
@@ -130,6 +134,7 @@ namespace GameServerApi.Controllers
 
         // GET /api/Game/Click/{userId}
         [HttpGet("Click/{userId}")]
+        [Authorize]
         public async Task<ActionResult<ClickResponse>> Click(int userId)
         {
             var progression = await _context.Progressions
@@ -159,6 +164,7 @@ namespace GameServerApi.Controllers
 
         // GET /api/Game/BestScore
         [HttpGet("BestScore")]
+        [Authorize]
         public async Task<ActionResult<BestScoreResponse>> GetBestScore()
         {
             var bestProgression = await _context.Progressions

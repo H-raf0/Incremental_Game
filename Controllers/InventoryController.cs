@@ -25,6 +25,7 @@ namespace GameServerApi.Controllers
 
         // GET /api/Inventory/Seed
         [HttpGet("Seed")]
+        [AllowAnonymous]
         public async Task<ActionResult<bool>> SeedInventory()
         {
             try
@@ -72,6 +73,7 @@ namespace GameServerApi.Controllers
 
         //GET /api/Inventory/Items
         [HttpGet("Items")]
+        [AllowAnonymous]
         public async Task<ActionResult<Item[]>> GetAllItems()
         {
             var items = await _context.Items.ToArrayAsync();
@@ -84,6 +86,7 @@ namespace GameServerApi.Controllers
 
         //POST /api/Inventory/Buy/{userId}/{itemId}
         [HttpPost("Buy/{userId}/{itemId}")]
+        [Authorize]
         public async Task<ActionResult<InventoryEntry>> BuyItem(int userId, int itemId)
         {
             // Verify user exists
@@ -140,6 +143,7 @@ namespace GameServerApi.Controllers
 
         //GET /api/Inventory/UserInventory/{userId}
         [HttpGet("UserInventory/{userId}")]
+        [Authorize]
         public async Task<ActionResult<InventoryEntry[]>> UserInventory(int userId)
         {
             var inventory = await _context.InventoryEntries
