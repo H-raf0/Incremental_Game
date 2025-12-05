@@ -44,17 +44,17 @@ public class Program
         builder.Services.AddDbContext<ApplicationDbContext>();
 
         builder.Services.AddScoped<PasswordHasher<User>>();
+        builder.Services.AddScoped<JwtService>();
 
         builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", builder => builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+                options.AddPolicy("AllowSpecific", builder => 
+                    builder
+                        .WithOrigins("https://csharp.nouvet.fr", "http://localhost:3000", "http://localhost:5173")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials());
             });
-        /*
-        builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowSpecificOrigin", builder => builder.WithOrigins("https://csharp.nouvet.fr/front3"));
-            });
-        */
 
         var app = builder.Build();
 
@@ -65,10 +65,9 @@ public class Program
             app.MapScalarApiReference();
         }
 
+        app.UseCors("AllowSpecific");
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseCors("AllowAll");
-        // app.UseCors("AllowSpecificOrigin");
 
         app.MapControllers();
 

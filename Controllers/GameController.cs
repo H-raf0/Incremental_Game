@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 using GameServerApi.Models;
 
@@ -13,10 +14,21 @@ namespace GameServerApi.Controllers
     public class GameController : ControllerBase
     {
 
+
         private readonly ApplicationDbContext _context;
-        public GameController(ApplicationDbContext  ctx)
+        public GameController(ApplicationDbContext ctx)
         {
             _context = ctx;
+        }
+
+        private int? GetUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return null;
+            }
+            return userId;
         }
 
 
@@ -52,11 +64,17 @@ namespace GameServerApi.Controllers
 
         }
 
-        // GET /api/Game/Progression/{userId}
-        [HttpGet("Progression/{userId}")]
+        // GET /api/Game/Progression/
+        [HttpGet("Progression")]
         [Authorize]
-        public async Task<ActionResult<Progression>> GetProgression(int userId)
+        public async Task<ActionResult<Progression>> GetProgression()
         {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            }
+
             var progression = await _context.Progressions
                 .Where(p => p.UserId == userId)
                 .FirstOrDefaultAsync();

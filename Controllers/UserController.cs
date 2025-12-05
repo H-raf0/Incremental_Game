@@ -26,6 +26,7 @@ namespace GameServerApi.Controllers
 
         // GET: api/<UserController>/All
         [HttpGet("All")]
+        [AllowAnonymous]
         public async Task<ActionResult<List<UserPublic>>> GetAllUsers()
         {
             var users = await _context.Users
@@ -88,7 +89,7 @@ namespace GameServerApi.Controllers
         }
 
 
-        // POST api/<UserController>
+        // POST api/<UserController>/Register
         [HttpPost("Register")]
         [AllowAnonymous]
         public async Task<ActionResult<dynamic>> RegisterUser([FromBody] UserPass newUser)
