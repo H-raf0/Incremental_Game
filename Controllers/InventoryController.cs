@@ -17,10 +17,10 @@ namespace GameServerApi.Controllers
     public class InventoryController : ControllerBase
     {
 
-        private readonly ApplicationDbContext _context;
-        public InventoryController(ApplicationDbContext ctx)
+        private readonly GameServerApi.Services.InventoryService _inventoryService;
+        public InventoryController(GameServerApi.Services.InventoryService inventoryService)
         {
-            _context = ctx;
+            _inventoryService = inventoryService;
         }
 
         private int? GetUserId()
@@ -38,47 +38,9 @@ namespace GameServerApi.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<bool>> SeedInventory()
         {
-            try
-            {
-                _context.Items.RemoveRange(_context.Items);
-                _context.InventoryEntries.RemoveRange(_context.InventoryEntries);
-
-                var client = new HttpClient();
-                string json = await client.GetStringAsync("https://csharp.nouvet.fr/front4/items.json");
-
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var items = JsonSerializer.Deserialize<List<Item>>(json, options);
-
-                if (items == null)
-                {
-                    return BadRequest(new ErrorResponse(
-                    "seed failed: items deserialization returned null",
-                    "SEED_FAILED"
-                    ));
-                }
-
-                // Filter out items that don't have a valid Name (prevents NOT NULL constraint failure)
-                var validItems = items.Where(i => !string.IsNullOrWhiteSpace(i?.Name)).ToList();
-                if (validItems.Count == 0)
-                {
-                    return BadRequest(new ErrorResponse(
-                        "seed failed: no valid items found",
-                        "SEED_FAILED"
-                    ));
-                }
-
-                _context.Items.AddRange(validItems);
-                await _context.SaveChangesAsync();
-
-                return Ok(true);
-            }
-            catch
-            {
-                return BadRequest(new ErrorResponse(
-                    "seed failed: an exception occurred",
-                    "SEED_FAILED"
-                    ));
-            }
+            var (Success, Error) = await _inventoryService.SeedInventoryAsync();
+            if (!Success && Error != null) return BadRequest(Error);
+            return Ok(true);
         }
 
         //GET /api/Inventory/Items
@@ -86,8 +48,8 @@ namespace GameServerApi.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<Item[]>> GetAllItems()
         {
-            var items = await _context.Items.ToArrayAsync();
-            if(items == null || items.Length == 0)
+            var items = await _inventoryService.GetAllItemsAsync();
+            if (items == null || items.Length == 0)
             {
                 return NotFound(new ErrorResponse("No items found", "NO_ITEMS"));
             }
@@ -99,63 +61,11 @@ namespace GameServerApi.Controllers
         public async Task<ActionResult<InventoryEntry>> BuyItem(int itemId)
         {
             var userId = GetUserId();
-            if (userId == null)
-            {
-                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
-            }
+            if (userId == null) return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
 
-            // Verify user exists
-            var user = await _context.Users.FindAsync(userId.Value);
-            if (user == null)
-            {
-                return BadRequest(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-            
-            // Verify progression
-            var progression = await _context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId.Value);
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-
-            // Verify item exists
-            var item = await _context.Items.FindAsync(itemId);
-            if (item == null)
-            {
-                return BadRequest(new ErrorResponse("Item not found", "ITEM_NOT_FOUND"));
-            }
-
-            // Check funds
-            if (progression.Count < item.Price)
-            {
-                return BadRequest(new ErrorResponse("Not enough money to buy the item", "NOT_ENOUGH_MONEY"));
-            }
-
-            var inventoryEntry = await _context.InventoryEntries
-                .FirstOrDefaultAsync(i => i.UserId == userId.Value && i.ItemId == itemId);
-
-            if (inventoryEntry != null)
-            {
-                if (inventoryEntry.Quantity >= item.MaxQuantity)
-                {
-                    return BadRequest(new ErrorResponse("Inventory is full", "INVENTORY_FULL"));
-                }
-
-                inventoryEntry.Quantity += 1;
-            }
-            else
-            {
-                inventoryEntry = new InventoryEntry(userId.Value, itemId, 1);
-                _context.InventoryEntries.Add(inventoryEntry);
-            }
-
-            // Deduct price from user's progression (currency)
-            progression.Count -= item.Price;
-            
-            progression.totalClickValue += item.ClickValue;
-
-            await _context.SaveChangesAsync();
-            return Ok(inventoryEntry);
+            var (Success, Entry, Error) = await _inventoryService.BuyItemAsync(userId.Value, itemId);
+            if (!Success && Error != null) return BadRequest(Error);
+            return Ok(Entry);
         }
 
         //GET /api/Inventory/UserInventory
@@ -164,14 +74,8 @@ namespace GameServerApi.Controllers
         public async Task<ActionResult<InventoryEntry[]>> UserInventory()
         {
             var userId = GetUserId();
-            if (userId == null)
-            {
-                return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
-            }
-            var inventory = await _context.InventoryEntries
-                .Where(i => i.UserId == userId.Value)
-                .ToArrayAsync();
-
+            if (userId == null) return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
+            var inventory = await _inventoryService.GetUserInventoryAsync(userId.Value);
             return Ok(inventory);
         }
     }

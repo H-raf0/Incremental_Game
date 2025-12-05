@@ -3,6 +3,7 @@ namespace GameServerApi;
 
 using Scalar.AspNetCore;
 using GameServerApi.Models;
+using GameServerApi.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore.Sqlite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,6 +46,9 @@ public class Program
 
         builder.Services.AddScoped<PasswordHasher<User>>();
         builder.Services.AddScoped<JwtService>();
+        builder.Services.AddScoped<UserService>();
+        builder.Services.AddScoped<GameService>();
+        builder.Services.AddScoped<InventoryService>();
 
         builder.Services.AddCors(options =>
             {

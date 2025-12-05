@@ -16,10 +16,10 @@ namespace GameServerApi.Controllers
     {
 
 
-        private readonly ApplicationDbContext _context;
-        public GameController(ApplicationDbContext ctx)
+        private readonly GameServerApi.Services.GameService _gameService;
+        public GameController(GameServerApi.Services.GameService gameService)
         {
-            _context = ctx;
+            _gameService = gameService;
         }
 
         private int? GetUserId()
@@ -43,29 +43,10 @@ namespace GameServerApi.Controllers
             {
                 return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
             }
-            bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
-            if (exists)
-            {
-                return BadRequest(new ErrorResponse(
-                    "Progression already exists",
-                    "PROGRESSION_EXISTS"
-                ));
-            }
 
-            try
-            {
-                var progression = new Progression(userId.Value);
-                _context.Progressions.Add(progression);
-                await _context.SaveChangesAsync();
-                return Ok(progression);
-            }
-            catch
-            {
-                return BadRequest(new ErrorResponse(
-                    "Failed to initialize",
-                    "INITIALIZATION_FAILED"
-                ));
-            }
+            var (Success, Progression, Error) = await _gameService.InitializeProgressionAsync(userId.Value);
+            if (!Success && Error != null) return BadRequest(Error);
+            return Ok(Progression);
 
         }
 
@@ -80,15 +61,11 @@ namespace GameServerApi.Controllers
                 return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
             }
 
-            var progression = await _context.Progressions
-                .Where(p => p.UserId == userId)
-                .FirstOrDefaultAsync();
-
+            var progression = await _gameService.GetProgressionAsync(userId.Value);
             if (progression == null)
             {
                 return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
             }
-
             return Ok(progression);
         }
 
@@ -103,41 +80,9 @@ namespace GameServerApi.Controllers
                 return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
             }
 
-            // The progression is linked to user by UserId, not by primary key
-            var progression = await _context.Progressions
-                .FirstOrDefaultAsync(p => p.UserId == userId);
-
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("No progression", "NO_PROGRESSION"));
-            }
-
-            // Check reset cost
-            var resetCost = progression.CalculateResetCost();
-            if (resetCost > progression.Count)
-            {
-                return BadRequest(new ErrorResponse("Not enough clicks to reset", "INSUFFICIENT_CLICKS"));
-            }
-
-            // update personal best score if current count is higher
-            if (progression.Count > progression.BestScore)
-            {
-                progression.BestScore = progression.Count;
-            }
-
-            // Apply reset
-            progression.Count = 0;
-            progression.totalClickValue = 0;
-            progression.Multiplier++;
-
-
-            // vider la db
-            var inventoryEntries = _context.InventoryEntries.Where(i => i.UserId == userId);
-            _context.InventoryEntries.RemoveRange(inventoryEntries);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(progression);
+            var (Success, Progression, Error) = await _gameService.ResetProgressionAsync(userId.Value);
+            if (!Success && Error != null) return BadRequest(Error);
+            return Ok(Progression);
         }
 
 
@@ -153,17 +98,9 @@ namespace GameServerApi.Controllers
                 return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
             }
 
-            var progression = await _context.Progressions
-                .Where(p => p.UserId == userId.Value)
-                .FirstOrDefaultAsync();
-
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
-            }
-
-            int cost = progression.CalculateResetCost();
-            return Ok(new ResetCostResponse(cost));
+            var (Success, Cost, Error) = await _gameService.GetResetCostAsync(userId.Value);
+            if (!Success && Error != null) return BadRequest(Error);
+            return Ok(new ResetCostResponse(Cost));
         }
 
 
@@ -179,31 +116,9 @@ namespace GameServerApi.Controllers
                 return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
             }
 
-            // The progression is linked to user by UserId, not by primary key
-            var progression = await _context.Progressions
-                .FirstOrDefaultAsync(p => p.UserId == userId.Value);
-
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
-            }
-            /*
-            // valeur ajouter des equipements
-            var inventoryEntries = await _context.InventoryEntries
-                .Where(i => i.UserId == userId)
-                .ToListAsync();
-            
-            int bonus = inventoryEntries.Sum(entry =>
-            {
-                var item = _context.Items.Find(entry.ItemId);
-                return item != null ? item.ClickValue * entry.Quantity : 0;
-            });*/
-
-            progression.Count += progression.Multiplier + progression.totalClickValue;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new ClickResponse(progression.Count, progression.Multiplier));
+            var (success, response, error) = await _gameService.ClickAsync(userId.Value);
+            if (!success && error != null) return BadRequest(error);
+            return Ok(response);
         }
 
         // GET /api/Game/BestScore
@@ -211,18 +126,9 @@ namespace GameServerApi.Controllers
         [Authorize]
         public async Task<ActionResult<BestScoreResponse>> GetBestScore()
         {
-            var bestProgression = await _context.Progressions
-                .OrderByDescending(p => p.BestScore)
-                .FirstOrDefaultAsync();
-
-
-            // Return the global best score and its owner
-            if (bestProgression == null || bestProgression.BestScore == 0)
-            {
-                return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSIONS"));
-            }
-
-            return Ok(new BestScoreResponse(bestProgression.UserId, bestProgression.BestScore));
+            var best = await _gameService.GetBestScoreAsync();
+            if (best == null) return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSIONS"));
+            return Ok(best);
         }
 
 
