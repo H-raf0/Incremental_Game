@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Diagnostics;
+using GameServerApi.Exceptions;
 
 public class Program
 {
@@ -68,7 +70,26 @@ public class Program
             app.MapOpenApi();
             app.MapScalarApiReference();
         }
-
+        //
+        app.UseExceptionHandler(errorApp =>
+        {
+            errorApp.Run(async context =>
+            {
+                context.Response.ContentType = "application/json";
+                var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                if (exception is GameException gameEx)
+                {
+                    context.Response.StatusCode = gameEx.StatusCode;
+                    await context.Response.WriteAsJsonAsync(new { message = gameEx.Message, code = gameEx.Code });
+                }
+                else
+                {
+                    context.Response.StatusCode = 500;
+                    await context.Response.WriteAsJsonAsync(new { message = "Internal server error" });
+                }
+            });
+        });
+        //
         app.UseCors("AllowSpecific");
         app.UseAuthentication();
         app.UseAuthorization();

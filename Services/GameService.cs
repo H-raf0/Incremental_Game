@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Services
 {
@@ -12,12 +13,12 @@ namespace GameServerApi.Services
             _context = context;
         }
 
-        public async Task<(bool Success, Progression? Progression, ErrorResponse? Error)> InitializeProgressionAsync(int userId)
+        public async Task<Progression> InitializeProgressionAsync(int userId)
         {
             bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
             if (exists)
             {
-                return (false, null, new ErrorResponse("Progression already exists", "PROGRESSION_EXISTS"));
+                throw new GameException("Progression already exists", "PROGRESSION_EXISTS", 400);
             }
 
             try
@@ -25,35 +26,42 @@ namespace GameServerApi.Services
                 var progression = new Progression(userId);
                 _context.Progressions.Add(progression);
                 await _context.SaveChangesAsync();
-                return (true, progression, null);
+                return progression;
             }
             catch
             {
-                return (false, null, new ErrorResponse("Failed to initialize", "INITIALIZATION_FAILED"));
+                throw new GameException("Failed to initialize", "INITIALIZATION_FAILED", 500);
             }
         }
 
-        public async Task<Progression?> GetProgressionAsync(int userId)
+        public async Task<Progression> GetProgressionAsync(int userId)
         {
-            return await _context.Progressions
+            var progression = await _context.Progressions
                 .Where(p => p.UserId == userId)
                 .FirstOrDefaultAsync();
+
+            if (progression == null)
+            {
+                throw new GameException("No progressions found", "NO_PROGRESSION", 404);
+            }
+
+            return progression;
         }
 
-        public async Task<(bool Success, Progression? Progression, ErrorResponse? Error)> ResetProgressionAsync(int userId)
+        public async Task<Progression> ResetProgressionAsync(int userId)
         {
             var progression = await _context.Progressions
                 .FirstOrDefaultAsync(p => p.UserId == userId);
 
             if (progression == null)
             {
-                return (false, null, new ErrorResponse("No progression", "NO_PROGRESSION"));
+                throw new GameException("No progression", "NO_PROGRESSION", 404);
             }
 
             var resetCost = progression.CalculateResetCost();
             if (resetCost > progression.Count)
             {
-                return (false, null, new ErrorResponse("Not enough clicks to reset", "INSUFFICIENT_CLICKS"));
+                throw new GameException("Not enough clicks to reset", "INSUFFICIENT_CLICKS", 400);
             }
 
             if (progression.Count > progression.BestScore)
@@ -70,10 +78,10 @@ namespace GameServerApi.Services
 
             await _context.SaveChangesAsync();
 
-            return (true, progression, null);
+            return progression;
         }
 
-        public async Task<(bool Success, int Cost, ErrorResponse? Error)> GetResetCostAsync(int userId)
+        public async Task<int> GetResetCostAsync(int userId)
         {
             var progression = await _context.Progressions
                 .Where(p => p.UserId == userId)
@@ -81,30 +89,30 @@ namespace GameServerApi.Services
 
             if (progression == null)
             {
-                return (false, 0, new ErrorResponse("No progressions found", "NO_PROGRESSION"));
+                throw new GameException("No progressions found", "NO_PROGRESSION", 404);
             }
 
             int cost = progression.CalculateResetCost();
-            return (true, cost, null);
+            return cost;
         }
 
-        public async Task<(bool Success, ClickResponse? Response, ErrorResponse? Error)> ClickAsync(int userId)
+        public async Task<ClickResponse> ClickAsync(int userId)
         {
             var progression = await _context.Progressions
                 .FirstOrDefaultAsync(p => p.UserId == userId);
 
             if (progression == null)
             {
-                return (false, null, new ErrorResponse("No progressions found", "NO_PROGRESSION"));
+                throw new GameException("No progressions found", "NO_PROGRESSION", 404);
             }
 
             progression.Count += progression.Multiplier + progression.totalClickValue;
             await _context.SaveChangesAsync();
 
-            return (true, new ClickResponse(progression.Count, progression.Multiplier), null);
+            return new ClickResponse(progression.Count, progression.Multiplier);
         }
 
-        public async Task<BestScoreResponse?> GetBestScoreAsync()
+        public async Task<BestScoreResponse> GetBestScoreAsync()
         {
             var bestProgression = await _context.Progressions
                 .OrderByDescending(p => p.BestScore)
@@ -112,7 +120,7 @@ namespace GameServerApi.Services
 
             if (bestProgression == null || bestProgression.BestScore == 0)
             {
-                return null;
+                throw new GameException("No progressions found", "NO_PROGRESSIONS", 404);
             }
 
             return new BestScoreResponse(bestProgression.UserId, bestProgression.BestScore);
