@@ -25,13 +25,7 @@ namespace GameServerApi.Services
                 string json = await client.GetStringAsync("https://csharp.nouvet.fr/front4/items.json");
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var items = JsonSerializer.Deserialize<List<Item>>(json, options);
-
-                if (items == null)
-                {
-                    throw new GameException("seed failed: items deserialization returned null", "SEED_FAILED", 500);
-                }
-
+                var items = JsonSerializer.Deserialize<List<Item>>(json, options) ?? throw new GameException("seed failed: items deserialization returned null", "SEED_FAILED", 500);
                 var validItems = items.Where(i => !string.IsNullOrWhiteSpace(i?.Name)).ToList();
                 if (validItems.Count == 0)
                 {
@@ -63,59 +57,57 @@ namespace GameServerApi.Services
 
         public async Task<InventoryEntry> BuyItemAsync(int userId, int itemId)
         {
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null)
-            {
-                throw new GameException("User not found", "USER_NOT_FOUND", 404);
-            }
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            var progression = await _context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId);
-            if (progression == null)
+            try
             {
-                throw new GameException("User not found", "USER_NOT_FOUND", 404);
-            }
+                var user = await _context.Users.FindAsync(userId) ?? throw new GameException("User not found", "USER_NOT_FOUND", 404);
+                
+                var progression = await _context.Progressions
+                    .FirstOrDefaultAsync(p => p.UserId == userId) ?? throw new GameException("Progression not found", "PROGRESSION_NOT_FOUND", 404);
+                
+                var item = await _context.Items.FindAsync(itemId) ?? throw new GameException("Item not found", "ITEM_NOT_FOUND", 404);
+                
+                if (progression.Count < item.Price)
+                    throw new GameException("Not enough money", "NOT_ENOUGH_MONEY", 400);
 
-            var item = await _context.Items.FindAsync(itemId);
-            if (item == null)
-            {
-                throw new GameException("Item not found", "ITEM_NOT_FOUND", 404);
-            }
+                var inventoryEntry = await _context.InventoryEntries
+                    .FirstOrDefaultAsync(i => i.UserId == userId && i.ItemId == itemId);
 
-            if (progression.Count < item.Price)
-            {
-                throw new GameException("Not enough money to buy the item", "NOT_ENOUGH_MONEY", 400);
-            }
-
-            var inventoryEntry = await _context.InventoryEntries
-                .FirstOrDefaultAsync(i => i.UserId == userId && i.ItemId == itemId);
-
-            if (inventoryEntry != null)
-            {
-                if (inventoryEntry.Quantity >= item.MaxQuantity)
+                if (inventoryEntry != null)
                 {
-                    throw new GameException("Inventory is full", "INVENTORY_FULL", 400);
+                    if (inventoryEntry.Quantity >= item.MaxQuantity)
+                        throw new GameException("Inventory full", "INVENTORY_FULL", 400);
+
+                    inventoryEntry.Quantity += 1;
+                }
+                else
+                {
+                    inventoryEntry = new InventoryEntry(userId, itemId, 1);
+                    _context.InventoryEntries.Add(inventoryEntry);
                 }
 
-                inventoryEntry.Quantity += 1;
+                progression.Count -= item.Price;
+                progression.totalClickValue += item.ClickValue;
+
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return inventoryEntry;
             }
-            else
+            catch
             {
-                inventoryEntry = new InventoryEntry(userId, itemId, 1);
-                _context.InventoryEntries.Add(inventoryEntry);
+                await transaction.RollbackAsync();
+                throw;
             }
-
-            progression.Count -= item.Price;
-            progression.totalClickValue += item.ClickValue;
-
-            await _context.SaveChangesAsync();
-            return inventoryEntry;
         }
 
         public async Task<InventoryEntry[]> GetUserInventoryAsync(int userId)
         {
             var inventory = await _context.InventoryEntries
                 .Where(i => i.UserId == userId)
-                .ToArrayAsync();
+                .ToArrayAsync() ?? throw new GameException("Inventory not found", "INVENTORY_NOT_FOUND", 404);            
 
             return inventory;
         }

@@ -1,16 +1,19 @@
 using System.Text.Json;
 using GameServerApi.Exceptions;
 using GameServerApi.Models;
+using Microsoft.Extensions.Logging;
 
 namespace GameServerApi.Middlewares;
 
 public class ErrorHandlingMiddleware
 {
     private readonly RequestDelegate _next;
+    private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
-    public ErrorHandlingMiddleware(RequestDelegate next)
+    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
     {
         _next = next;
+        _logger = logger;
     }
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
@@ -32,6 +35,7 @@ public class ErrorHandlingMiddleware
         else
         {
             context.Response.StatusCode = 500;
+            _logger.LogError(exception, "An error occurred");
             var errorResponse = new ErrorResponse("Internal Server Error", "INTERNAL_SERVER_ERROR");
             await context.Response.WriteAsJsonAsync(errorResponse, options);
         }
