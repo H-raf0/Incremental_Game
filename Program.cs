@@ -70,7 +70,7 @@ public class Program
             app.MapOpenApi();
             app.MapScalarApiReference();
         }
-        //
+        // ---
         app.UseExceptionHandler(errorApp =>
         {
             errorApp.Run(async context =>
@@ -89,7 +89,7 @@ public class Program
                 }
             });
         });
-        //
+        // ---
         app.UseCors("AllowSpecific");
         app.UseAuthentication();
         app.UseAuthorization();
