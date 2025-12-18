@@ -64,6 +64,7 @@ public class Program
             });
 
         var app = builder.Build();
+        app.UseMiddleware<MyApp.Middlewares.ErrorHandlingMiddleware>();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
