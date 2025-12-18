@@ -5,13 +5,10 @@ using Scalar.AspNetCore;
 using GameServerApi.Models;
 using GameServerApi.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore.Sqlite;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Diagnostics;
-using GameServerApi.Exceptions;
 using GameServerApi.Middlewares;
 
 public class Program
@@ -64,7 +61,6 @@ public class Program
             });
 
         var app = builder.Build();
-        app.UseMiddleware<MyApp.Middlewares.ErrorHandlingMiddleware>();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
