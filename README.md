@@ -14,5 +14,4 @@ dotnet ef database update
 //dotnet ef migrations add AddCascadeDeleteForProgression
 
 
-
-//semaine 5 replacer l'id par les tokens
+// we are in week 7
