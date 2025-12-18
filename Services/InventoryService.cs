@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Services
 {
@@ -13,7 +14,7 @@ namespace GameServerApi.Services
             _context = context;
         }
 
-        public async Task<(bool Success, ErrorResponse? Error)> SeedInventoryAsync()
+        public async Task SeedInventoryAsync()
         {
             try
             {
@@ -28,55 +29,61 @@ namespace GameServerApi.Services
 
                 if (items == null)
                 {
-                    return (false, new ErrorResponse("seed failed: items deserialization returned null", "SEED_FAILED"));
+                    throw new GameException("seed failed: items deserialization returned null", "SEED_FAILED", 500);
                 }
 
                 var validItems = items.Where(i => !string.IsNullOrWhiteSpace(i?.Name)).ToList();
                 if (validItems.Count == 0)
                 {
-                    return (false, new ErrorResponse("seed failed: no valid items found", "SEED_FAILED"));
+                    throw new GameException("seed failed: no valid items found", "SEED_FAILED", 500);
                 }
 
                 _context.Items.AddRange(validItems);
                 await _context.SaveChangesAsync();
-
-                return (true, null);
+            }
+            catch (GameException)
+            {
+                throw;
             }
             catch
             {
-                return (false, new ErrorResponse("seed failed: an exception occurred", "SEED_FAILED"));
+                throw new GameException("seed failed: an exception occurred", "SEED_FAILED", 500);
             }
         }
 
-        public async Task<Item[]?> GetAllItemsAsync()
+        public async Task<Item[]> GetAllItemsAsync()
         {
             var items = await _context.Items.ToArrayAsync();
+            if (items == null || items.Length == 0)
+            {
+                throw new GameException("No items found", "NO_ITEMS", 404);
+            }
             return items;
         }
 
-        public async Task<(bool Success, InventoryEntry? Entry, ErrorResponse? Error)> BuyItemAsync(int userId, int itemId)
+        public async Task<InventoryEntry> BuyItemAsync(int userId, int itemId)
         {
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                return (false, null, new ErrorResponse("User not found", "USER_NOT_FOUND"));
+                throw new GameException("User not found", "USER_NOT_FOUND", 404);
             }
 
             var progression = await _context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId);
             if (progression == null)
             {
-                return (false, null, new ErrorResponse("User not found", "USER_NOT_FOUND"));
+                throw new GameException("User not found", "USER_NOT_FOUND", 404);
             }
 
             var item = await _context.Items.FindAsync(itemId);
             if (item == null)
             {
-                return (false, null, new ErrorResponse("Item not found", "ITEM_NOT_FOUND"));
+                throw new GameException("Item not found", "ITEM_NOT_FOUND", 404);
             }
 
             if (progression.Count < item.Price)
             {
-                return (false, null, new ErrorResponse("Not enough money to buy the item", "NOT_ENOUGH_MONEY"));
+                throw new GameException("Not enough money to buy the item", "NOT_ENOUGH_MONEY", 400);
             }
 
             var inventoryEntry = await _context.InventoryEntries
@@ -86,7 +93,7 @@ namespace GameServerApi.Services
             {
                 if (inventoryEntry.Quantity >= item.MaxQuantity)
                 {
-                    return (false, null, new ErrorResponse("Inventory is full", "INVENTORY_FULL"));
+                    throw new GameException("Inventory is full", "INVENTORY_FULL", 400);
                 }
 
                 inventoryEntry.Quantity += 1;
@@ -101,10 +108,10 @@ namespace GameServerApi.Services
             progression.totalClickValue += item.ClickValue;
 
             await _context.SaveChangesAsync();
-            return (true, inventoryEntry, null);
+            return inventoryEntry;
         }
 
-        public async Task<InventoryEntry[]?> GetUserInventoryAsync(int userId)
+        public async Task<InventoryEntry[]> GetUserInventoryAsync(int userId)
         {
             var inventory = await _context.InventoryEntries
                 .Where(i => i.UserId == userId)

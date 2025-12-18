@@ -37,34 +37,34 @@ namespace GameServerApi.Controllers
         // GET /api/Game/Initialize
         [HttpGet("Initialize")]
         [Authorize]
-        public async Task<ActionResult<Progression>> InitializeProgression()
+        public async Task<Progression> InitializeProgression()
         {  // initialization is done in UserController when creating user so what is the point of this ? 
             var userId = GetUserId();
 
             var progression = await _gameService.InitializeProgressionAsync(userId);
-            return Ok(progression);
+            return progression;
         }
 
         // GET /api/Game/Progression/
         [HttpGet("Progression")]
         [Authorize]
-        public async Task<ActionResult<Progression>> GetProgression()
+        public async Task<Progression> GetProgression()
         {
             var userId = GetUserId();
 
             var progression = await _gameService.GetProgressionAsync(userId);
-            return Ok(progression);
+            return progression;
         }
 
         // POST /api/Game/Reset
         [HttpPost("Reset")]
         [Authorize]
-        public async Task<ActionResult<Progression>> ResetProgression()
+        public async Task<Progression> ResetProgression()
         {
             var userId = GetUserId();
 
             var progression = await _gameService.ResetProgressionAsync(userId);
-            return Ok(progression);
+            return progression;
         }
 
 
@@ -72,12 +72,12 @@ namespace GameServerApi.Controllers
         // GET /api/Game/ResetCost
         [HttpGet("ResetCost")]
         [Authorize]
-        public async Task<ActionResult<int>> ResetCost()
+        public async Task<int> ResetCost()
         {
             var userId = GetUserId();
 
             var cost = await _gameService.GetResetCostAsync(userId);
-            return Ok(new ResetCostResponse(cost));
+            return cost;
         }
 
 
@@ -85,24 +85,22 @@ namespace GameServerApi.Controllers
         // GET /api/Game/Click
         [HttpGet("Click")]
         [Authorize]
-        public async Task<ActionResult<ClickResponse>> Click()
+        public async Task<ClickResponse> Click()
         {
             var userId = GetUserId();
 
             var response = await _gameService.ClickAsync(userId);
-            return Ok(response);
+            return response;
         }
 
         // GET /api/Game/BestScore
         [HttpGet("BestScore")]
         [Authorize]
-        public async Task<ActionResult<BestScoreResponse>> GetBestScore()
+        public async Task<BestScoreResponse> GetBestScore()
         {
             var best = await _gameService.GetBestScoreAsync();
-            return Ok(best);
+            return best;
         }
-
-
 
     }
 }

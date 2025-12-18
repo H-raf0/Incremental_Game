@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
 
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Controllers
 {
@@ -24,71 +25,58 @@ namespace GameServerApi.Controllers
         // GET: api/<UserController>/All
         [HttpGet("All")]
         [AllowAnonymous]
-        public async Task<ActionResult<List<UserPublic>>> GetAllUsers()
+        public async Task<List<UserPublic>> GetAllUsers()
         {
             var users = await _userService.GetAllUsersAsync();
-            return Ok(users);
+            return users;
         }
 
         // GET api/<UserController>/{id}
         [HttpGet("{id}")]
         [Authorize]
-        public async Task<ActionResult<UserPublic>> GetUserById(int id)
+        public async Task<UserPublic> GetUserById(int id)
         {
             var user = await _userService.GetUserByIdAsync(id);
-            if (user == null)
-            {
-                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-            return Ok(user);
+            return user;
         }
 
         // GET api/<UserController>/Search/{name}
         [HttpGet("Search/{name}")]
         [Authorize]
-        public async Task<ActionResult<IEnumerable<UserPublic>>> SearchUsers(string name)
+        public async Task<IEnumerable<UserPublic>> SearchUsers(string name)
         {
             var result = await _userService.SearchUsersAsync(name);
-            return Ok(result);
+            return result;
         }
 
         // GET: api/<UserController>/AllAdmin
         [HttpGet("AllAdmin")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<IEnumerable<UserPublic>>> GetAllAdminUsers()
+        public async Task<IEnumerable<UserPublic>> GetAllAdminUsers()
         {
             var result = await _userService.GetAllAdminUsersAsync();
-            return Ok(result);
+            return result;
         }
 
 
         // POST api/<UserController>/Register
         [HttpPost("Register")]
         [AllowAnonymous]
-        public async Task<ActionResult<dynamic>> RegisterUser([FromBody] UserPass newUser)
+        public async Task<object> RegisterUser([FromBody] UserPass newUser)
         {
-            var (Success, Token, User, Error) = await _userService.RegisterUserAsync(newUser);
-            if (!Success && Error != null)
-            {
-                return BadRequest(Error);
-            }
+            var (Token, User) = await _userService.RegisterUserAsync(newUser);
 
-            return CreatedAtAction(nameof(GetUserById), new { id = User!.Id }, new { token = Token, user = User });
+            return new { token = Token, user = User };
         }
 
 
         // POST api/<UserController>
         [HttpPost("Login")]
         [AllowAnonymous]
-        public async Task<ActionResult<dynamic>> Login([FromBody] UserPass userPass)
+        public async Task<object> Login([FromBody] UserPass userPass)
         {
-            var (Success, Token, User, Error) = await _userService.LoginAsync(userPass);
-            if (!Success && Error != null)
-            {
-                if (Error.Code == "USER_NOT_FOUND") return NotFound(Error);
-                return Unauthorized(Error);
-            }
-            return Ok(new { token = Token, user = User });
+            var (Token, User) = await _userService.LoginAsync(userPass);
+            return new { token = Token, user = User };
         }
 
 
@@ -97,15 +85,10 @@ namespace GameServerApi.Controllers
         // PUT api/<UserController>/5
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<User>> UpdateUser(int id, [FromBody] UserUpdate userUpdate)
+        public async Task<User> UpdateUser(int id, [FromBody] UserUpdate userUpdate)
         {
             var user = await _userService.UpdateUserAsync(id, userUpdate);
-            if (user == null)
-            {
-                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-            return Ok(user);
-
+            return user;
         }
 
 
@@ -113,15 +96,9 @@ namespace GameServerApi.Controllers
         // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult> DeleteUser(int id)
+        public async Task DeleteUser(int id)
         {
-            var deleted = await _userService.DeleteUserAsync(id);
-            if (!deleted)
-            {
-                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-            return Ok(true);
-
+            await _userService.DeleteUserAsync(id);
         }
         
     }

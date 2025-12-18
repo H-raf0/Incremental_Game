@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Services
 {
@@ -21,12 +22,17 @@ namespace GameServerApi.Services
                 .ToListAsync();
         }
 
-        public async Task<UserPublic?> GetUserByIdAsync(int id)
+        public async Task<UserPublic> GetUserByIdAsync(int id)
         {
-            return await _context.Users
+            var user = await _context.Users
                 .Where(u => u.Id == id)
                 .Select(u => new UserPublic(u.Id, u.Username, u.Role))
                 .FirstOrDefaultAsync();
+            if (user == null)
+            {
+                throw new GameException("User not found", "USER_NOT_FOUND", 404);
+            }
+            return user;
         }
 
         public async Task<IEnumerable<UserPublic>> SearchUsersAsync(string name)
@@ -52,12 +58,12 @@ namespace GameServerApi.Services
             return admins.Select(u => new UserPublic(u.Id, u.Username, u.Role));
         }
 
-        public async Task<(bool Success, string? Token, UserPublic? User, ErrorResponse? Error)> RegisterUserAsync(UserPass newUser)
+        public async Task<(string Token, UserPublic User)> RegisterUserAsync(UserPass newUser)
         {
             bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
             if (exists)
             {
-                return (false, null, null, new ErrorResponse("Username already exists", "USERNAME_EXISTS"));
+                throw new GameException("Username already exists", "USERNAME_EXISTS", 400);
             }
 
             try
@@ -75,36 +81,39 @@ namespace GameServerApi.Services
                 await _context.SaveChangesAsync();
 
                 var token = _jwtService.GenerateToken(user);
-                return (true, token, new UserPublic(user.Id, user.Username, user.Role), null);
+                return (token, new UserPublic(user.Id, user.Username, user.Role));
             }
             catch
             {
-                return (false, null, null, new ErrorResponse("Registration failed", "REGISTRATION_FAILED"));
+                throw new GameException("Registration failed", "REGISTRATION_FAILED", 500);
             }
         }
 
-        public async Task<(bool Success, string? Token, UserPublic? User, ErrorResponse? Error)> LoginAsync(UserPass userPass)
+        public async Task<(string Token, UserPublic User)> LoginAsync(UserPass userPass)
         {
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.Username == userPass.Username);
 
             if (user == null)
             {
-                return (false, null, null, new ErrorResponse("User not found", "USER_NOT_FOUND"));
+                throw new GameException("User not found", "USER_NOT_FOUND", 404);
             }
             if (!user.VerifyPassword(userPass.Password))
             {
-                return (false, null, null, new ErrorResponse("invalid password", "INVALID_PASSWORD"));
+                throw new GameException("invalid password", "INVALID_PASSWORD", 401);
             }
 
             var token = _jwtService.GenerateToken(user);
-            return (true, token, new UserPublic(user.Id, user.Username, user.Role), null);
+            return (token, new UserPublic(user.Id, user.Username, user.Role));
         }
 
-        public async Task<User?> UpdateUserAsync(int id, UserUpdate userUpdate)
+        public async Task<User> UpdateUserAsync(int id, UserUpdate userUpdate)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null) return null;
+            if (user == null)
+            {
+                throw new GameException("User not found", "USER_NOT_FOUND", 404);
+            }
 
             if (!string.IsNullOrEmpty(userUpdate.Username))
             {
@@ -125,14 +134,16 @@ namespace GameServerApi.Services
             return user;
         }
 
-        public async Task<bool> DeleteUserAsync(int id)
+        public async Task DeleteUserAsync(int id)
         {
             var user = await _context.Users.FindAsync(id);
-            if (user == null) return false;
+            if (user == null)
+            {
+                throw new GameException("User not found", "USER_NOT_FOUND", 404);
+            }
 
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
-            return true;
         }
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 
 
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Controllers
 {
@@ -23,12 +24,12 @@ namespace GameServerApi.Controllers
             _inventoryService = inventoryService;
         }
 
-        private int? GetUserId()
+        private int GetUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
             {
-                return null;
+                throw new GameException("Invalid token", "INVALID_TOKEN", 401);
             }
             return userId;
         }
@@ -36,47 +37,38 @@ namespace GameServerApi.Controllers
         // GET /api/Inventory/Seed
         [HttpGet("Seed")]
         [AllowAnonymous]
-        public async Task<ActionResult<bool>> SeedInventory()
+        public async Task<bool> SeedInventory()
         {
-            var (Success, Error) = await _inventoryService.SeedInventoryAsync();
-            if (!Success && Error != null) return BadRequest(Error);
-            return Ok(true);
+            await _inventoryService.SeedInventoryAsync();
+            return true;
         }
 
         //GET /api/Inventory/Items
         [HttpGet("Items")]
         [AllowAnonymous]
-        public async Task<ActionResult<Item[]>> GetAllItems()
+        public async Task<Item[]> GetAllItems()
         {
             var items = await _inventoryService.GetAllItemsAsync();
-            if (items == null || items.Length == 0)
-            {
-                return NotFound(new ErrorResponse("No items found", "NO_ITEMS"));
-            }
-            return Ok(items);
+            return items;
         }
 
         //POST /api/Inventory/Buy/{itemId}
         [HttpPost("Buy/{itemId}")]
-        public async Task<ActionResult<InventoryEntry>> BuyItem(int itemId)
+        public async Task<InventoryEntry> BuyItem(int itemId)
         {
             var userId = GetUserId();
-            if (userId == null) return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
-
-            var (Success, Entry, Error) = await _inventoryService.BuyItemAsync(userId.Value, itemId);
-            if (!Success && Error != null) return BadRequest(Error);
-            return Ok(Entry);
+            var entry = await _inventoryService.BuyItemAsync(userId, itemId);
+            return entry;
         }
 
         //GET /api/Inventory/UserInventory
         [HttpGet("UserInventory")]
         [Authorize]
-        public async Task<ActionResult<InventoryEntry[]>> UserInventory()
+        public async Task<InventoryEntry[]> UserInventory()
         {
             var userId = GetUserId();
-            if (userId == null) return Unauthorized(new ErrorResponse("Invalid token", "INVALID_TOKEN"));
-            var inventory = await _inventoryService.GetUserInventoryAsync(userId.Value);
-            return Ok(inventory);
+            var inventory = await _inventoryService.GetUserInventoryAsync(userId);
+            return inventory;
         }
     }
 }
