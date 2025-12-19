@@ -17,11 +17,13 @@ namespace GameServerApi.Controllers
     [ApiController]
     public class InventoryController : ControllerBase
     {
-
         private readonly GameServerApi.Services.InventoryService _inventoryService;
-        public InventoryController(GameServerApi.Services.InventoryService inventoryService)
+        private readonly ILogger<InventoryController> _logger;
+        
+        public InventoryController(GameServerApi.Services.InventoryService inventoryService, ILogger<InventoryController> logger)
         {
             _inventoryService = inventoryService;
+            _logger = logger;
         }
 
         private int GetUserId()

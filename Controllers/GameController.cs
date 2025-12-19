@@ -15,12 +15,13 @@ namespace GameServerApi.Controllers
     [Authorize]
     public class GameController : ControllerBase
     {
-
-
         private readonly GameServerApi.Services.GameService _gameService;
-        public GameController(GameServerApi.Services.GameService gameService)
+        private readonly ILogger<GameController> _logger;
+        
+        public GameController(GameServerApi.Services.GameService gameService, ILogger<GameController> logger)
         {
             _gameService = gameService;
+            _logger = logger;
         }
 
         private int GetUserId()

@@ -62,6 +62,8 @@ public class Program
 
         var app = builder.Build();
 
+        app.Logger.LogInformation("Application is starting up...");
+
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
@@ -69,10 +71,13 @@ public class Program
             app.MapScalarApiReference();
         }
         app.UseCors("AllowSpecific");
+        app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
+
+        app.Logger.LogInformation("Application initialization complete");
 
         app.Run();
     }
