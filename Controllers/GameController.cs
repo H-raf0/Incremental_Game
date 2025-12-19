@@ -7,6 +7,7 @@ using System.Security.Claims;
 using GameServerApi.Models;
 using System.Numerics;
 using GameServerApi.Exceptions;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace GameServerApi.Controllers
 {
@@ -85,6 +86,7 @@ namespace GameServerApi.Controllers
         // GET /api/Game/Click
         [HttpGet("Click")]
         [Authorize]
+        [EnableRateLimiting("perUser")]
         public async Task<ClickResponse> Click()
         {
             var userId = GetUserId();

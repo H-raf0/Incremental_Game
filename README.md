@@ -15,3 +15,9 @@ dotnet ef database update
 
 
 // we are in week 7
+
+
+
+
+
+relire perUser dans program.cs
