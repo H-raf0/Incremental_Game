@@ -17,9 +17,12 @@ namespace GameServerApi.Controllers
     public class UserController : ControllerBase
     {
         private readonly GameServerApi.Services.UserService _userService;
-        public UserController(GameServerApi.Services.UserService userService)
+        private readonly ILogger<UserController> _logger;
+        
+        public UserController(GameServerApi.Services.UserService userService, ILogger<UserController> logger)
         {
             _userService = userService;
+            _logger = logger;
         }
 
         // GET: api/<UserController>/All

@@ -10,7 +10,12 @@ public class ApplicationDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder options)
     {
-        options.UseSqlite("Data Source=ProjectDB.db");
+        // Vérifie si une configuration (comme InMemory pour les tests) est déjà présente
+        if (!options.IsConfigured)
+        {
+            // Connexion à la base sqlite par défaut
+            options.UseSqlite("Data Source=ProjectDB.db");
+        }
     }
 
     // All DbSets in one place
