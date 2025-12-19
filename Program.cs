@@ -6,9 +6,11 @@ using GameServerApi.Models;
 using GameServerApi.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using GameServerApi.Middlewares;
 
 public class Program
@@ -59,6 +61,42 @@ public class Program
                         .AllowAnyMethod()
                         .AllowCredentials());
             });
+        
+        builder.Services.AddRateLimiter(options =>
+        {
+            // Rejet avec le code 429 Too Many Requests
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.ContentType = "application/json";
+                await context.HttpContext.Response.WriteAsync("{\"error\": \"Too Many Requests\", \"message\": \"Rate limit exceeded\"}", token);
+            };
+
+            // Définition d'une politique nommée "fixed"
+            options.AddFixedWindowLimiter("fixed", limiterOptions =>
+            {
+                limiterOptions.PermitLimit = 10; // Max 10 requêtes
+                limiterOptions.Window = TimeSpan.FromSeconds(10); // Toutes les 10 secondes
+                limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                limiterOptions.QueueLimit = 0; // Pas de file d'attente
+            });
+
+            // Politique par utilisateur pour les clics
+            options.AddPolicy("perUser", context =>
+            {
+                var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous";
+                return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10, // Max 10 clics par seconde par utilisateur
+                    Window = TimeSpan.FromSeconds(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0
+                });
+            });
+            
+        });
 
         var app = builder.Build();
 
@@ -71,6 +109,7 @@ public class Program
             app.MapScalarApiReference();
         }
         app.UseCors("AllowSpecific");
+        app.UseRateLimiter();
         app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseAuthentication();

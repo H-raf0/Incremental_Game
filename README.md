@@ -16,3 +16,10 @@ dotnet ef database update
 
 TO DO
 gameservice doit etre tester à 100% 
+// we are in week 7
+
+
+
+
+
+relire perUser dans program.cs
