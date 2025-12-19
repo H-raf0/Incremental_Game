@@ -67,6 +67,13 @@ public class Program
             // Rejet avec le code 429 Too Many Requests
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+            options.OnRejected = async (context, token) =>
+            {
+                context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.ContentType = "application/json";
+                await context.HttpContext.Response.WriteAsync("{\"error\": \"Too Many Requests\", \"message\": \"Rate limit exceeded\"}", token);
+            };
+
             // Définition d'une politique nommée "fixed"
             options.AddFixedWindowLimiter("fixed", limiterOptions =>
             {
@@ -82,8 +89,8 @@ public class Program
                 var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous";
                 return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 10, // Max 10 clics par minute par utilisateur
-                    Window = TimeSpan.FromMinutes(1),
+                    PermitLimit = 10, // Max 10 clics par seconde par utilisateur
+                    Window = TimeSpan.FromSeconds(1),
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                     QueueLimit = 0
                 });
