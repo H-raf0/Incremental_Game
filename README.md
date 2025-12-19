@@ -14,4 +14,5 @@ dotnet ef database update
 //dotnet ef migrations add AddCascadeDeleteForProgression
 
 
-// we are in week 7
+TO DO
+gameservice doit etre tester à 100% 
