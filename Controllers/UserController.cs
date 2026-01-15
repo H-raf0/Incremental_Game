@@ -18,7 +18,7 @@ namespace GameServerApi.Controllers
     {
         private readonly GameServerApi.Services.UserService _userService;
         private readonly ILogger<UserController> _logger;
-        
+
         public UserController(GameServerApi.Services.UserService userService, ILogger<UserController> logger)
         {
             _userService = userService;
@@ -30,6 +30,7 @@ namespace GameServerApi.Controllers
         [AllowAnonymous]
         public async Task<List<UserPublic>> GetAllUsers()
         {
+            _logger.LogDebug("GetAllUsers called");
             var users = await _userService.GetAllUsersAsync();
             return users;
         }
@@ -39,6 +40,7 @@ namespace GameServerApi.Controllers
         [Authorize]
         public async Task<UserPublic> GetUserById(int id)
         {
+            _logger.LogDebug("GetUserById called for {UserId}", id);
             var user = await _userService.GetUserByIdAsync(id);
             return user;
         }
@@ -48,6 +50,7 @@ namespace GameServerApi.Controllers
         [Authorize]
         public async Task<IEnumerable<UserPublic>> SearchUsers(string name)
         {
+            _logger.LogDebug("SearchUsers called with name={Name}", name);
             var result = await _userService.SearchUsersAsync(name);
             return result;
         }
@@ -67,8 +70,10 @@ namespace GameServerApi.Controllers
         [AllowAnonymous]
         public async Task<object> RegisterUser([FromBody] UserPass newUser)
         {
+            _logger.LogInformation("Register attempt for username {Username}", newUser.Username);
             var (Token, User) = await _userService.RegisterUserAsync(newUser);
 
+            _logger.LogInformation("User registered {Username} (Id: {UserId})", User.Username, User.Id);
             return new { token = Token, user = User };
         }
 
@@ -78,7 +83,9 @@ namespace GameServerApi.Controllers
         [AllowAnonymous]
         public async Task<object> Login([FromBody] UserPass userPass)
         {
+            _logger.LogInformation("Login attempt for username {Username}", userPass.Username);
             var (Token, User) = await _userService.LoginAsync(userPass);
+            _logger.LogInformation("User logged in {Username} (Id: {UserId})", User.Username, User.Id);
             return new { token = Token, user = User };
         }
 

@@ -28,14 +28,15 @@ public class ErrorHandlingMiddleware
         {
             context.Response.StatusCode = gameEx.StatusCode;
             var errorResponse = new ErrorResponse(gameEx.Message, gameEx.Code);
+            _logger.LogError(exception, "GameException handled: {Code} - {Message}", gameEx.Code, gameEx.Message);
 
-            //JsonSerializer.Serialize est appelé automatiquement par WriteAsJsonAsync
+            // JsonSerializer.Serialize est appelé automatiquement par WriteAsJsonAsync
             await context.Response.WriteAsJsonAsync(errorResponse, options);
         }
         else
         {
             context.Response.StatusCode = 500;
-            _logger.LogError(exception, "An error occurred");
+            _logger.LogError(exception, "An unhandled exception occurred");
             var errorResponse = new ErrorResponse("Internal Server Error", "INTERNAL_SERVER_ERROR");
             await context.Response.WriteAsJsonAsync(errorResponse, options);
         }

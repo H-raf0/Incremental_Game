@@ -1,25 +1,26 @@
 {
   "format": 1,
   "restore": {
-    "/home/local.isima.fr/moismailim/Desktop/Mouad/Development-web-c-sharp/GameServerApi.csproj": {}
+    "/home/mouad/Bureau/Incremental_Game/GameServerApi.csproj": {}
   },
   "projects": {
-    "/home/local.isima.fr/moismailim/Desktop/Mouad/Development-web-c-sharp/GameServerApi.csproj": {
+    "/home/mouad/Bureau/Incremental_Game/GameServerApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/local.isima.fr/moismailim/Desktop/Mouad/Development-web-c-sharp/GameServerApi.csproj",
+        "projectUniqueName": "/home/mouad/Bureau/Incremental_Game/GameServerApi.csproj",
         "projectName": "GameServerApi",
-        "projectPath": "/home/local.isima.fr/moismailim/Desktop/Mouad/Development-web-c-sharp/GameServerApi.csproj",
-        "packagesPath": "/home/local.isima.fr/moismailim/.nuget/packages/",
-        "outputPath": "/home/local.isima.fr/moismailim/Desktop/Mouad/Development-web-c-sharp/obj/",
+        "projectPath": "/home/mouad/Bureau/Incremental_Game/GameServerApi.csproj",
+        "packagesPath": "/home/mouad/.nuget/packages/",
+        "outputPath": "/home/mouad/Bureau/Incremental_Game/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/local.isima.fr/moismailim/.nuget/NuGet/NuGet.Config"
+          "/home/mouad/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
+          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -38,12 +39,16 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "9.0.100"
       },
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[9.0.*, )"
+            },
             "Microsoft.AspNetCore.OpenApi": {
               "target": "Package",
               "version": "[9.0.3, )"
@@ -86,7 +91,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/home/local.isima.fr/moismailim/.dotnet/sdk/9.0.308/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/9.0.112/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

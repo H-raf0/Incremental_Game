@@ -19,7 +19,7 @@ namespace GameServerApi.Controllers
     {
         private readonly GameServerApi.Services.InventoryService _inventoryService;
         private readonly ILogger<InventoryController> _logger;
-        
+
         public InventoryController(GameServerApi.Services.InventoryService inventoryService, ILogger<InventoryController> logger)
         {
             _inventoryService = inventoryService;
@@ -41,7 +41,9 @@ namespace GameServerApi.Controllers
         [AllowAnonymous]
         public async Task<bool> SeedInventory()
         {
+            _logger.LogInformation("SeedInventory requested");
             await _inventoryService.SeedInventoryAsync();
+            _logger.LogInformation("SeedInventory completed");
             return true;
         }
 
@@ -50,6 +52,7 @@ namespace GameServerApi.Controllers
         [AllowAnonymous]
         public async Task<Item[]> GetAllItems()
         {
+            _logger.LogDebug("GetAllItems called");
             var items = await _inventoryService.GetAllItemsAsync();
             return items;
         }
@@ -59,7 +62,9 @@ namespace GameServerApi.Controllers
         public async Task<InventoryEntry> BuyItem(int itemId)
         {
             var userId = GetUserId();
+            _logger.LogInformation("User {UserId} attempts to buy item {ItemId}", userId, itemId);
             var entry = await _inventoryService.BuyItemAsync(userId, itemId);
+            _logger.LogInformation("User {UserId} bought item {ItemId} (EntryId: {EntryId})", userId, itemId, entry.Id);
             return entry;
         }
 
@@ -69,6 +74,7 @@ namespace GameServerApi.Controllers
         public async Task<InventoryEntry[]> UserInventory()
         {
             var userId = GetUserId();
+            _logger.LogDebug("UserInventory requested for user {UserId}", userId);
             var inventory = await _inventoryService.GetUserInventoryAsync(userId);
             return inventory;
         }
