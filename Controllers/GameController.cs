@@ -1,164 +1,109 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 using GameServerApi.Models;
+using System.Numerics;
+using GameServerApi.Exceptions;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace GameServerApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class GameController : ControllerBase
     {
-
-        private readonly ApplicationDbContext _context;
-        public GameController(ApplicationDbContext  ctx)
+        private readonly GameServerApi.Services.GameService _gameService;
+        private readonly ILogger<GameController> _logger;
+        
+        public GameController(GameServerApi.Services.GameService gameService, ILogger<GameController> logger)
         {
-            _context = ctx;
+            _gameService = gameService;
+            _logger = logger;
+        }
+
+        private int GetUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new GameException("Invalid token", "INVALID_TOKEN", 401);
+            }
+            return userId;
         }
 
 
-        // GET /api/Game/Initialize/{userId}
-        [HttpGet("Initialize/{userId}")]
-        public async Task<ActionResult<Progression>> InitializeProgression(int userId)
+        // GET /api/Game/Initialize
+        [HttpGet("Initialize")]
+        [Authorize]
+        public async Task<Progression> InitializeProgression()
         {  // initialization is done in UserController when creating user so what is the point of this ? 
+            var userId = GetUserId();
 
-            bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
-            if (exists)
-            {
-                return BadRequest(new ErrorResponse(
-                    "Progression already exists",
-                    "PROGRESSION_EXISTS"
-                ));
-            }
-
-            try
-            {
-                var progression = new Progression(userId);
-                _context.Progressions.Add(progression);
-                await _context.SaveChangesAsync();
-                return Ok(progression);
-            }
-            catch
-            {
-                return BadRequest(new ErrorResponse(
-                    "Failed to initialize",
-                    "INITIALIZATION_FAILED"
-                ));
-            }
-
+            var progression = await _gameService.InitializeProgressionAsync(userId);
+            return progression;
         }
 
-        // GET /api/Game/Progression/{userId}
-        [HttpGet("Progression/{userId}")]
-        public async Task<ActionResult<Progression>> GetProgression(int userId)
+        // GET /api/Game/Progression/
+        [HttpGet("Progression")]
+        [Authorize]
+        public async Task<Progression> GetProgression()
         {
-            var progression = await _context.Progressions
-                .Where(p => p.UserId == userId)
-                .FirstOrDefaultAsync();
+            var userId = GetUserId();
 
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
-            }
-
-            return Ok(progression);
+            var progression = await _gameService.GetProgressionAsync(userId);
+            return progression;
         }
 
-        // POST /api/Game/Reset/{userId}
-        [HttpPost("Reset/{userId}")]
-        public async Task<ActionResult<Progression>> ResetProgression(int userId)
+        // POST /api/Game/Reset
+        [HttpPost("Reset")]
+        [Authorize]
+        public async Task<Progression> ResetProgression()
         {
-            // The progression is linked to user by UserId, not by primary key
-            var progression = await _context.Progressions
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+            var userId = GetUserId();
 
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("No progression", "NO_PROGRESSION"));
-            }
-
-            // Check reset cost
-            var resetCost = progression.CalculateResetCost();
-            if (resetCost > progression.Count)
-            {
-                return BadRequest(new ErrorResponse("Not enough clicks to reset", "INSUFFICIENT_CLICKS"));
-            }
-
-            // update personal best score if current count is higher
-            if (progression.Count > progression.BestScore)
-            {
-                progression.BestScore = progression.Count;
-            }
-
-            // Apply reset
-            progression.Count = 0;
-            progression.Multiplier++;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(progression);
+            var progression = await _gameService.ResetProgressionAsync(userId);
+            return progression;
         }
 
 
 
-        // GET /api/Game/ResetCost/{userId}
-        [HttpGet("ResetCost/{userId}")]
-        public async Task<ActionResult<int>> ResetCost(int userId)
+        // GET /api/Game/ResetCost
+        [HttpGet("ResetCost")]
+        [Authorize]
+        public async Task<int> ResetCost()
         {
-            var progression = await _context.Progressions
-                .Where(p => p.UserId == userId)
-                .FirstOrDefaultAsync();
+            var userId = GetUserId();
 
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
-            }
-
-            int cost = progression.CalculateResetCost();
-            return Ok(new ResetCostResponse(cost));
+            var cost = await _gameService.GetResetCostAsync(userId);
+            return cost;
         }
 
 
 
-        // GET /api/Game/Click/{userId}
-        [HttpGet("Click/{userId}")]
-        public async Task<ActionResult<ClickResponse>> Click(int userId)
+        // GET /api/Game/Click
+        [HttpGet("Click")]
+        [Authorize]
+        [EnableRateLimiting("perUser")]
+        public async Task<ClickResponse> Click()
         {
-            var progression = await _context.Progressions
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+            var userId = GetUserId();
 
-            if (progression == null)
-            {
-                return BadRequest(new ErrorResponse("No progressions found", "NO_PROGRESSION"));
-            }
-
-            progression.Count += 1 * progression.Multiplier;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new ClickResponse(progression.Count, progression.Multiplier));
+            var response = await _gameService.ClickAsync(userId);
+            return response;
         }
 
         // GET /api/Game/BestScore
         [HttpGet("BestScore")]
-        public async Task<ActionResult<BestScoreResponse>> GetBestScore()
+        [Authorize]
+        public async Task<BestScoreResponse> GetBestScore()
         {
-            var bestProgression = await _context.Progressions
-                .OrderByDescending(p => p.BestScore)
-                .FirstOrDefaultAsync();
-
-
-            // Return the global best score and its owner
-            if (bestProgression == null || bestProgression.BestScore == 0)
-            {
-                return NotFound(new ErrorResponse("No progressions found", "NO_PROGRESSIONS"));
-            }
-
-            return Ok(new BestScoreResponse(bestProgression.UserId, bestProgression.BestScore));
+            var best = await _gameService.GetBestScoreAsync();
+            return best;
         }
-
-
 
     }
 }

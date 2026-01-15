@@ -4,153 +4,82 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
     {
-
-        private readonly ApplicationDbContext _context;
-        public UserController(ApplicationDbContext ctx)
+        private readonly GameServerApi.Services.UserService _userService;
+        private readonly ILogger<UserController> _logger;
+        
+        public UserController(GameServerApi.Services.UserService userService, ILogger<UserController> logger)
         {
-            _context = ctx;
+            _userService = userService;
+            _logger = logger;
         }
 
         // GET: api/<UserController>/All
         [HttpGet("All")]
-        public async Task<ActionResult<List<UserPublic>>> GetAllUsers()
+        [AllowAnonymous]
+        public async Task<List<UserPublic>> GetAllUsers()
         {
-            var users = await _context.Users
-                .Select(u => new UserPublic(u.Id, u.Username, u.Role))
-                .ToListAsync();
-
-            return Ok(users);
+            var users = await _userService.GetAllUsersAsync();
+            return users;
         }
 
         // GET api/<UserController>/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<UserPublic>> GetUserById(int id)
+        [Authorize]
+        public async Task<UserPublic> GetUserById(int id)
         {
-            var user = await _context.Users
-                .Where(u => u.Id == id)
-                .Select(u => new UserPublic(u.Id, u.Username, u.Role))
-                .FirstOrDefaultAsync();
-
-            if (user == null)
-            {
-                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-
-            return Ok(user);
+            var user = await _userService.GetUserByIdAsync(id);
+            return user;
         }
 
         // GET api/<UserController>/Search/{name}
         [HttpGet("Search/{name}")]
-        public async Task<ActionResult<IEnumerable<UserPublic>>> SearchUsers(string name)
+        [Authorize]
+        public async Task<IEnumerable<UserPublic>> SearchUsers(string name)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                return Ok(Array.Empty<UserPublic>());
-
-            var lowerName = name.ToLower();
-
-            var users = await _context.Users
-                .Where(u => u.Username.ToLower().Contains(lowerName) || u.Username.ToLower() == lowerName)
-                .ToListAsync();
-
-            var result = users.Select(u => new UserPublic(u.Id, u.Username, u.Role));
-            return Ok(result);
+            var result = await _userService.SearchUsersAsync(name);
+            return result;
         }
 
         // GET: api/<UserController>/AllAdmin
         [HttpGet("AllAdmin")]
-        public async Task<ActionResult<IEnumerable<UserPublic>>> GetAllAdminUsers()
+        [Authorize(Roles = "Admin")]
+        public async Task<IEnumerable<UserPublic>> GetAllAdminUsers()
         {
-            // Get all users with Role.ADMIN
-            var admins = await _context.Users
-                .Where(u => u.Role == Role.ADMIN)
-                .ToListAsync();
-
-            // Convert to UserPublic DTO
-            var result = admins.Select(u => new UserPublic(u.Id, u.Username, u.Role));
-
-            return Ok(result);
+            var result = await _userService.GetAllAdminUsersAsync();
+            return result;
         }
 
 
-        // POST api/<UserController>
+        // POST api/<UserController>/Register
         [HttpPost("Register")]
-        public async Task<ActionResult<UserPublic>> RegisterUser([FromBody] UserPass newUser)
+        [AllowAnonymous]
+        public async Task<object> RegisterUser([FromBody] UserPass newUser)
         {
-            // Check if username already exists
-            bool exists = await _context.Users.AnyAsync(u => u.Username == newUser.Username);
-            if (exists)
-            {
-                return BadRequest(new ErrorResponse(
-                    "Username already exists",
-                    "USERNAME_EXISTS"
-                ));
-            }
+            var (Token, User) = await _userService.RegisterUserAsync(newUser);
 
-            try
-            {
-                // Check if any Admin exists in the database
-                bool adminExists = await _context.Users.AnyAsync(u => u.Role == Role.ADMIN);
-                
-                // Determine the role: ADMIN if no admin exists, otherwise USER
-                Role userRole = adminExists ? Role.USER : Role.ADMIN;
-
-                // Create user with password (constructor handles hashing)
-                User user = new User(newUser.Username, newUser.Password, userRole);
-
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
-                
-                // Initialize progression for the new user
-                var progression = new Progression(user.Id);
-                _context.Progressions.Add(progression);
-                await _context.SaveChangesAsync();
-
-                // Return 201 Created
-                return CreatedAtAction(nameof(GetUserById),
-                    new { id = user.Id },
-                    new UserPublic(user.Id, user.Username, user.Role));
-            }
-            catch
-            {
-                // Any unexpected failure
-                return BadRequest(new ErrorResponse(
-                    "Registration failed",
-                    "REGISTRATION_FAILED"
-                ));
-            }
+            return new { token = Token, user = User };
         }
 
 
         // POST api/<UserController>
         [HttpPost("Login")]
-        public async Task<ActionResult<UserPublic>> Login([FromBody] UserPass userPass)
+        [AllowAnonymous]
+        public async Task<object> Login([FromBody] UserPass userPass)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == userPass.Username);
-
-            // non trouvé ou mot de passe incorrect
-            if (user == null)
-            {
-                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-            if (!user.VerifyPassword(userPass.Password))
-            {
-                return Unauthorized(new ErrorResponse("invalid password", "INVALID_PASSWORD"));
-            }
-
-
-            // si tout est bon, on retourne les infos publiques
-            var userPublic = new UserPublic(user.Id, user.Username, user.Role);
-            return Ok(userPublic);
+            var (Token, User) = await _userService.LoginAsync(userPass);
+            return new { token = Token, user = User };
         }
 
 
@@ -158,65 +87,21 @@ namespace GameServerApi.Controllers
 
         // PUT api/<UserController>/5
         [HttpPut("{id}")]
-        public async Task<ActionResult<User>> UpdateUser(int id, [FromBody] UserUpdate userUpdate)
+        [Authorize(Roles = "Admin")]
+        public async Task<User> UpdateUser(int id, [FromBody] UserUpdate userUpdate)
         {
-            // Check if the user exists
-            var user = await _context.Users.FindAsync(id);
-            if (user == null)
-            {
-                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-
-            // Update username
-            if (!string.IsNullOrEmpty(userUpdate.Username))
-            {
-                user.Username = userUpdate.Username;
-            }
-
-            // Update role
-            if (userUpdate.Role != null)
-            {
-                // Mise à jour du rôle
-                user.Role = userUpdate.Role.Value;
-            }
-
-            // Update password
-            if (!string.IsNullOrEmpty(userUpdate.Password))
-            {
-                user.UpdatePassword(userUpdate.Password);
-            }
-
-            // Save changes
-            await _context.SaveChangesAsync();
-
-            return Ok(user);
-
+            var user = await _userService.UpdateUserAsync(id, userUpdate);
+            return user;
         }
 
 
 
         // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]
-        public async Task<ActionResult> DeleteUser(int id)
+        [Authorize(Roles = "Admin")]
+        public async Task DeleteUser(int id)
         {
-            // Rechercher l'utilisateur par son ID
-            var user = await _context.Users.FindAsync(id);
-
-            if (user == null)
-            {
-                return NotFound(new ErrorResponse("User not found", "USER_NOT_FOUND"));
-            }
-
-
-            // Supprimer l'utilisateur du contexte
-            _context.Users.Remove(user);
-
-            // Sauvegarder les modifications dans la base de données
-            await _context.SaveChangesAsync();
-
-
-            return Ok(true);
-
+            await _userService.DeleteUserAsync(id);
         }
         
     }

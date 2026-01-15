@@ -3,71 +3,74 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Linq;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class InventoryController : ControllerBase
     {
-
-        private readonly ApplicationDbContext _context;
-        public InventoryController(ApplicationDbContext ctx)
+        private readonly GameServerApi.Services.InventoryService _inventoryService;
+        private readonly ILogger<InventoryController> _logger;
+        
+        public InventoryController(GameServerApi.Services.InventoryService inventoryService, ILogger<InventoryController> logger)
         {
-            _context = ctx;
+            _inventoryService = inventoryService;
+            _logger = logger;
+        }
+
+        private int GetUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                throw new GameException("Invalid token", "INVALID_TOKEN", 401);
+            }
+            return userId;
         }
 
         // GET /api/Inventory/Seed
         [HttpGet("Seed")]
-        public async Task<ActionResult<bool>> SeedInventory()
+        [AllowAnonymous]
+        public async Task<bool> SeedInventory()
         {
-
-            try
-            {
-                _context.Items.RemoveRange(_context.Items);
-                _context.InventoryEntries.RemoveRange(_context.InventoryEntries);
-
-                var client = new HttpClient();
-                string json = await client.GetStringAsync("https://csharp.nouvet.fr/front4/items.json");
-
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var items = JsonSerializer.Deserialize<List<Item>>(json, options);
-
-                if (items == null)
-                {
-                    return BadRequest(new ErrorResponse(
-                    "seed failed: items deserialization returned null",
-                    "SEED_FAILED"
-                    ));
-                }
-
-                // Filter out items that don't have a valid Name (prevents NOT NULL constraint failure)
-                var validItems = items.Where(i => !string.IsNullOrWhiteSpace(i?.Name)).ToList();
-                if (validItems.Count == 0)
-                {
-                    return BadRequest(new ErrorResponse(
-                        "seed failed: no valid items found",
-                        "SEED_FAILED"
-                    ));
-                }
-
-                _context.Items.AddRange(validItems);
-                await _context.SaveChangesAsync();
-
-                return Ok(true);
-            }
-            catch
-            {
-                return BadRequest(new ErrorResponse(
-                    "seed failed: an exception occurred",
-                    "SEED_FAILED"
-                    ));
-            }
+            await _inventoryService.SeedInventoryAsync();
+            return true;
         }
 
+        //GET /api/Inventory/Items
+        [HttpGet("Items")]
+        [AllowAnonymous]
+        public async Task<Item[]> GetAllItems()
+        {
+            var items = await _inventoryService.GetAllItemsAsync();
+            return items;
+        }
 
+        //POST /api/Inventory/Buy/{itemId}
+        [HttpPost("Buy/{itemId}")]
+        public async Task<InventoryEntry> BuyItem(int itemId)
+        {
+            var userId = GetUserId();
+            var entry = await _inventoryService.BuyItemAsync(userId, itemId);
+            return entry;
+        }
+
+        //GET /api/Inventory/UserInventory
+        [HttpGet("UserInventory")]
+        [Authorize]
+        public async Task<InventoryEntry[]> UserInventory()
+        {
+            var userId = GetUserId();
+            var inventory = await _inventoryService.GetUserInventoryAsync(userId);
+            return inventory;
+        }
     }
 }
