@@ -1,0 +1,56 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run tests (collect coverage)
+        run: |
+          dotnet test ./Tests/GameServerApi.Tests/GameServerApi.Tests.csproj --no-build --configuration Release --collect:"XPlat Code Coverage"
+
+      - name: Install reportgenerator tool
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool --version 4.8.12
+
+      - name: Generate HTML coverage report
+        run: |
+          reportgenerator -reports:./Tests/GameServerApi.Tests/TestResults/*/coverage.cobertura.xml -targetdir:coveragereport -reporttypes:Html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coveragereport
+
+      - name: Upload coverage xml
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: ./Tests/GameServerApi.Tests/TestResults/*/coverage.cobertura.xml
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v1
+        if: always()
+        with:
+          name: GameServerApi
+          path: Tests/GameServerApi.Tests/TestResults
+          reporter: dotnet
