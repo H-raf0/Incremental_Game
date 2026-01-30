@@ -104,7 +104,7 @@ namespace GameServerApi.Services
             return progression;
         }
 
-        public async Task<int> GetResetCostAsync(int userId)
+        public async Task<ResetCostResponse> GetResetCostAsync(int userId)
         {
             var progression = await _context.Progressions
                 .Where(p => p.UserId == userId)
@@ -116,7 +116,7 @@ namespace GameServerApi.Services
             }
 
             int cost = progression.CalculateResetCost();
-            return cost;
+            return new ResetCostResponse(cost);
         }
 
         public async Task<ClickResponse> ClickAsync(int userId)
