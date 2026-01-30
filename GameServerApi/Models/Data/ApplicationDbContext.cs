@@ -23,19 +23,12 @@ public class ApplicationDbContext : DbContext
     public DbSet<Progression> Progressions { get; set; } = null!;
     public DbSet<Item> Items { get; set; } = null!;
     public DbSet<InventoryEntry> InventoryEntries { get; set; } = null!;
-    public DbSet<PassiveIncome> PassiveIncomes { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<Progression>()
-            .HasOne<User>()
-            .WithMany()
-            .HasForeignKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        modelBuilder.Entity<PassiveIncome>()
             .HasOne<User>()
             .WithMany()
             .HasForeignKey(p => p.UserId)

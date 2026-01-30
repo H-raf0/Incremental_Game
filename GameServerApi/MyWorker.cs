@@ -17,37 +17,30 @@ public class MyWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("MyWorker starting...");
+        _logger.LogInformation("MyWorker (Passive Income) started");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
+                _logger.LogInformation("Worker is running at: {time}", DateTimeOffset.Now);
+
+                // Create a scope to get scoped services (DbContext and PassiveIncomeService)
                 using (var scope = _serviceProvider.CreateScope())
                 {
-                    // Get the database context and passive income service from the scope
-                    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     var passiveIncomeService = scope.ServiceProvider.GetRequiredService<PassiveIncomeService>();
-
-                    // Get all users from the database
-                    var users = await context.Users.ToListAsync();
-
-                    // Apply passive income for each user
-                    foreach (var user in users)
-                    {
-                        await passiveIncomeService.ApplyPassiveIncomeAsync(user.Id);
-                    }
+                    await passiveIncomeService.DistributePassiveIncomeAsync();
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error calculating passive income");
+                _logger.LogError(ex, "Error in passive income distribution");
             }
 
-            // Run calculation every 5 seconds
-            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+            // Distribute passive income every 30 seconds
+            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
 
-        _logger.LogInformation("MyWorker stopping...");
+        _logger.LogInformation("MyWorker (Passive Income) stopped");
     }
 }

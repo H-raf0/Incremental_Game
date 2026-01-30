@@ -6,59 +6,39 @@ using Microsoft.EntityFrameworkCore;
 public class PassiveIncomeService
 {
     private readonly ApplicationDbContext _context;
+    private readonly ILogger<PassiveIncomeService> _logger;
 
-    public PassiveIncomeService(ApplicationDbContext context)
+    public PassiveIncomeService(ApplicationDbContext context, ILogger<PassiveIncomeService> logger)
     {
         _context = context;
+        _logger = logger;
     }
 
-    public async Task ApplyPassiveIncomeAsync(int userId)
+    // Distribute 1 point to all users' score
+    public async Task DistributePassiveIncomeAsync()
     {
-        var income = await _context.PassiveIncomes.FirstOrDefaultAsync(p => p.UserId == userId);
-        if (income == null) return;
-
-        // Calculate time passed since last calculation
-        var timePassed = (DateTime.UtcNow - income.LastCalculatedAt).TotalSeconds;
-        // Calculate amount gained based on income per second
-        var gainedAmount = (decimal)(timePassed * (double)income.IncomePerSecond);
-
-        // Add the gained amount to the player's score
-        var progression = await _context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId);
-        if (progression != null)
+        try
         {
-            progression.Score += gainedAmount;
-            income.LastCalculatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-        }
-    }
-
-    public async Task InitializePassiveIncomeAsync(int userId, decimal initialIncome = 0.1m)
-    {
-        var existingIncome = await _context.PassiveIncomes.FirstOrDefaultAsync(p => p.UserId == userId);
-        if (existingIncome == null)
-        {
-            _context.PassiveIncomes.Add(new PassiveIncome
+            var progressions = await _context.Progressions.ToListAsync();
+            
+            if (progressions.Count == 0)
             {
-                UserId = userId,
-                IncomePerSecond = initialIncome,
-                LastCalculatedAt = DateTime.UtcNow
-            });
-            await _context.SaveChangesAsync();
-        }
-    }
+                _logger.LogInformation("No users to distribute passive income to");
+                return;
+            }
 
-    public async Task UpdateIncomePerSecondAsync(int userId, decimal newIncome)
-    {
-        var income = await _context.PassiveIncomes.FirstOrDefaultAsync(p => p.UserId == userId);
-        if (income != null)
+            // Add 1 point to each user
+            foreach (var progression in progressions)
+            {
+                progression.Score += 1;
+            }
+
+            await _context.SaveChangesAsync();
+            _logger.LogInformation($"Passive income distributed: +1 point to {progressions.Count} user(s)");
+        }
+        catch (Exception ex)
         {
-            income.IncomePerSecond = newIncome;
-            await _context.SaveChangesAsync();
+            _logger.LogError(ex, "Error distributing passive income");
         }
-    }
-
-    public async Task<PassiveIncome?> GetPassiveIncomeAsync(int userId)
-    {
-        return await _context.PassiveIncomes.FirstOrDefaultAsync(p => p.UserId == userId);
     }
 }
