@@ -48,3 +48,36 @@ copilot-messages.log
 .project/attachments/files/**
 # Local tools and report generator
 .tools/
+
+# Build outputs
+**/bin/
+**/obj/
+
+# Coverage output
+coveragereport/
+coverage.cobertura.xml
+
+# Test results and tools
+TestResults/
+.tools/
+
+# Local DBs and generated files
+*.db
+ProjectDB.db
+
+# Local settings
+appsettings.Development.json
+
+# Editor / OS
+.vs/
+.idea/
+*.user
+*.suo
+.DS_Store
+
+# Logs
+*.log
+
+# Publish output
+publish/
+
