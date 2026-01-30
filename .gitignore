@@ -294,6 +294,7 @@ GameServerApi/bin/
 GameServerApi/Migrations/
 GameServerApi/obj/
 GameServerApi.Tests/obj/
+GameServerApi.Tests/bin/
 
 #User.db
 # User-specific files (MonoDevelop/Xamarin Studio)

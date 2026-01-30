@@ -30,7 +30,7 @@ public class PassiveIncomeService
             // Add 1 point to each user
             foreach (var progression in progressions)
             {
-                progression.Score += 1;
+                progression.Count += 1;
             }
 
             await _context.SaveChangesAsync();
