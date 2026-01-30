@@ -109,9 +109,10 @@ namespace GameServerApi.Controllers
         // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task DeleteUser(int id)
+        public async Task<ActionResult<bool>> DeleteUser(int id)
         {
             await _userService.DeleteUserAsync(id);
+            return Ok(true);
         }
         
     }
