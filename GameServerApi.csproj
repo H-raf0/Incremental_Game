@@ -18,8 +18,6 @@
     <PackageReference Include="Scalar.AspNetCore" Version="2.9.0" />
     <PackageReference Include="Moq" Version="4.20.70" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <!-- Static analysis -->
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="7.0.0" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

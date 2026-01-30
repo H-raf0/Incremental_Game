@@ -16,6 +16,27 @@ public class PassiveIncomeService : BackgroundService
         _logger = logger;
     }
 
+    // Permet de distribuer le revenu passif à tous les utilisateurs (testable)
+    public static async Task<int> DistributePassiveIncomeAsync(ApplicationDbContext dbContext, CancellationToken cancellationToken)
+    {
+        // Récupérer toutes les progressions
+        var progressions = await dbContext.Progressions.ToListAsync(cancellationToken);
+
+        // Ajouter 1 point au score de chaque utilisateur
+        foreach (var progression in progressions)
+        {
+            progression.Count += 1;
+        }
+
+        // Sauvegarder les modifications si nécessaire
+        if (progressions.Count > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return progressions.Count;
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("PassiveIncomeService démarré.");
@@ -29,20 +50,11 @@ public class PassiveIncomeService : BackgroundService
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-                    // Récupérer toutes les progressions (async)
-                    var progressions = await dbContext.Progressions.ToListAsync(stoppingToken);
-
-                    // Ajouter 1 point au score de chaque utilisateur
-                    foreach (var progression in progressions)
+                    // Utiliser la méthode testable extraite pour distribuer le revenu passif
+                    var updatedCount = await DistributePassiveIncomeAsync(dbContext, stoppingToken);
+                    if (updatedCount > 0)
                     {
-                        progression.Count += 1;
-                    }
-
-                    // Sauvegarder les modifications
-                    if (progressions.Count > 0)
-                    {
-                        await dbContext.SaveChangesAsync(stoppingToken);
-                        _logger.LogInformation("Revenu passif distribué : +1 point à {UserCount} utilisateur(s)", progressions.Count);
+                        _logger.LogInformation("Revenu passif distribué : +1 point à {UserCount} utilisateur(s)", updatedCount);
                     }
                 }
 
