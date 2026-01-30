@@ -92,7 +92,8 @@ public class Program
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 context.HttpContext.Response.ContentType = "application/json";
-                await context.HttpContext.Response.WriteAsync("{\"error\": \"TOO_MANY_REQUESTS\", \"message\": \"Rate limit exceeded\"}", token);
+                var errorResponse = new { error = "Too Many Requests", code = "TOO_MANY_REQUESTS", message = "Rate limit exceeded" };
+                await context.HttpContext.Response.WriteAsJsonAsync(errorResponse, token);
             };
 
             // Définition d'une politique nommée "fixed"
