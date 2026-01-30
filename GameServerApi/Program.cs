@@ -77,7 +77,7 @@ public class Program
             // Définition d'une politique nommée "fixed"
             options.AddFixedWindowLimiter("fixed", limiterOptions =>
             {
-                limiterOptions.PermitLimit = 10; // Max 10 requêtes
+                limiterOptions.PermitLimit = 100; // Max 10 requêtes
                 limiterOptions.Window = TimeSpan.FromSeconds(10); // Toutes les 10 secondes
                 limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                 limiterOptions.QueueLimit = 0; // Pas de file d'attente
@@ -90,7 +90,7 @@ public class Program
                 return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = 10, // Max 10 clics par seconde par utilisateur
-                    Window = TimeSpan.FromSeconds(1),
+                    Window = TimeSpan.FromSeconds(10),
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                     QueueLimit = 0
                 });

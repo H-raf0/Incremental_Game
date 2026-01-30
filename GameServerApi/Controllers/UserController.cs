@@ -5,6 +5,7 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 
 using GameServerApi.Models;
 using GameServerApi.Exceptions;
@@ -68,6 +69,7 @@ namespace GameServerApi.Controllers
         // POST api/<UserController>/Register
         [HttpPost("Register")]
         [AllowAnonymous]
+        [EnableRateLimiting("fixed")]
         public async Task<object> RegisterUser([FromBody] UserPass newUser)
         {
             _logger.LogInformation("Register attempt for username {Username}", newUser.Username);
@@ -81,6 +83,7 @@ namespace GameServerApi.Controllers
         // POST api/<UserController>
         [HttpPost("Login")]
         [AllowAnonymous]
+        [EnableRateLimiting("fixed")]
         public async Task<object> Login([FromBody] UserPass userPass)
         {
             _logger.LogInformation("Login attempt for username {Username}", userPass.Username);

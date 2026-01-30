@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 
 
 using GameServerApi.Models;
@@ -59,6 +60,7 @@ namespace GameServerApi.Controllers
 
         //POST /api/Inventory/Buy/{itemId}
         [HttpPost("Buy/{itemId}")]
+        [EnableRateLimiting("perUser")]
         public async Task<InventoryEntry> BuyItem(int itemId)
         {
             var userId = GetUserId();
