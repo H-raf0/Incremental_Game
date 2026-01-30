@@ -10,9 +10,9 @@ namespace GameServerApi.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<GameService> _logger;
-        private readonly IHubContext<ChatHub> _hubContext;
+        private readonly IHubContext<ChatHub>? _hubContext;
 
-        public GameService(ApplicationDbContext context, ILogger<GameService> logger, IHubContext<ChatHub> hubContext)
+        public GameService(ApplicationDbContext context, ILogger<GameService> logger, IHubContext<ChatHub>? hubContext = null)
         {
             _context = context;
             _logger = logger;
@@ -98,8 +98,11 @@ namespace GameServerApi.Services
             var user = await _context.Users.FindAsync(userId);
             var username = user?.Username ?? "Unknown";
 
-            // Send a system message to the chat hub
-            await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{username} reseted his score of {previousCount} points !");
+            // Send a system message to the chat hub if hub context is available
+            if (_hubContext != null)
+            {
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{username} reseted his score of {previousCount} points !");
+            }
 
             return progression;
         }
