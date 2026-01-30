@@ -290,8 +290,9 @@ __pycache__/
 
 
 # my project useless files
-bin/
-obj/
+GameServerApi/bin/
+GameServerApi/obj/
+GameServerApi.Tests/obj/
 
 #User.db
 # User-specific files (MonoDevelop/Xamarin Studio)
