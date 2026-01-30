@@ -110,7 +110,7 @@ public class Program
         }
         app.UseCors("AllowSpecific");
         app.UseRateLimiter();
-        app.UseMiddleware<RequestLoggingMiddleware>();
+        app.UseMiddleware<RequestResponseLoggingMiddleware>();
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
