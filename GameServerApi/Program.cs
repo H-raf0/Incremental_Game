@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using System.Threading.RateLimiting;
 using GameServerApi.Middlewares;
 
@@ -18,6 +19,9 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
+        // Ajouter les services SignalR
+        builder.Services.AddSignalR();
 
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -35,10 +39,23 @@ public class Program
                     ),
                     RoleClaimType = ClaimTypes.Role // Dans quel claim est stocké le role
                 };
-                
+
                 // Handle authorization and authentication failures for JWT
                 options.Events = new JwtBearerEvents
                 {
+                    // Support receiving the access token from the query string for SignalR (WebSockets)
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"].ToString();
+                        var path = context.HttpContext.Request.Path;
+
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hub/chat"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnChallenge = async context =>
                     {
                         context.HandleResponse();
@@ -78,14 +95,26 @@ public class Program
 
         builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowSpecific", builder => 
+                options.AddPolicy("AllowSpecific", builder =>
                     builder
                         .WithOrigins("https://csharp.nouvet.fr", "http://localhost:3000", "http://localhost:5173")
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials());
             });
-        
+        /*
+        builder.Services.AddCors(options =>
+            {
+                options.AddDefaultPolicy(policy =>
+                {
+                    policy.SetIsOriginAllowed(origin => true) // Allow any origin
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials(); // SignalR requires credentials
+                });
+            });
+        */
+
         builder.Services.AddRateLimiter(options =>
         {
             // Rejet avec le code 429 Too Many Requests
@@ -120,7 +149,7 @@ public class Program
                     QueueLimit = 0
                 });
             });
-            
+
         });
 
         var app = builder.Build();
@@ -139,12 +168,14 @@ public class Program
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
-        
+
+        app.MapHub<ChatHub>("/hub/chat");
+
         // Handle authorization policy failures with JSON response
         app.Use(async (context, next) =>
         {
             await next();
-            
+
             if (context.Response.StatusCode == StatusCodes.Status403Forbidden)
             {
                 context.Response.ContentType = "application/json";
@@ -158,7 +189,7 @@ public class Program
                 await context.Response.WriteAsJsonAsync(errorResponse);
             }
         });
-        
+
         app.MapControllers();
 
         app.Logger.LogInformation("Application initialization complete");

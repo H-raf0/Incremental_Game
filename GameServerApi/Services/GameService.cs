@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using GameServerApi.Models;
 using GameServerApi.Exceptions;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
 
 namespace GameServerApi.Services
 {
@@ -9,11 +10,13 @@ namespace GameServerApi.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<GameService> _logger;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public GameService(ApplicationDbContext context, ILogger<GameService> logger)
+        public GameService(ApplicationDbContext context, ILogger<GameService> logger, IHubContext<ChatHub> hubContext)
         {
             _context = context;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public async Task<Progression> InitializeProgressionAsync(int userId)
@@ -72,6 +75,9 @@ namespace GameServerApi.Services
                 throw new GameException("Not enough clicks to reset", "INSUFFICIENT_CLICKS", 400);
             }
 
+            // Capture previous score for the system message
+            var previousCount = progression.Count;
+
             if (progression.Count > progression.BestScore)
             {
                 progression.BestScore = progression.Count;
@@ -87,6 +93,13 @@ namespace GameServerApi.Services
             await _context.SaveChangesAsync();
             
             _logger.LogInformation("Progression reset successfully: UserId {UserId}, NewMultiplier: {Multiplier}", userId, progression.Multiplier);
+
+            // Try to fetch the user's username to include in the system message
+            var user = await _context.Users.FindAsync(userId);
+            var username = user?.Username ?? "Unknown";
+
+            // Send a system message to the chat hub
+            await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{username} reseted his score of {previousCount} points !");
 
             return progression;
         }
