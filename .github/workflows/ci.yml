@@ -21,8 +21,16 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+      - name: Install dotnet-format
+        run: |
+          dotnet tool install --global dotnet-format --version 6.4.48
+
+      - name: Verify formatting
+        run: |
+          dotnet format --verify-no-changes --severity info
+
+      - name: Build (warnings as errors)
+        run: dotnet build --no-restore --configuration Release -warnaserror
 
       - name: Run tests (collect coverage)
         run: |
