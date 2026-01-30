@@ -71,6 +71,7 @@ public class Program
         builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<GameService>();
         builder.Services.AddScoped<InventoryService>();
+        builder.Services.AddScoped<PassiveIncomeService>();
 
         builder.Services.AddCors(options =>
             {
@@ -91,13 +92,14 @@ public class Program
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 context.HttpContext.Response.ContentType = "application/json";
-                await context.HttpContext.Response.WriteAsync("{\"error\": \"Too Many Requests\", \"message\": \"Rate limit exceeded\"}", token);
+                var errorResponse = new { error = "Too Many Requests", code = "TOO_MANY_REQUESTS", message = "Rate limit exceeded" };
+                await context.HttpContext.Response.WriteAsJsonAsync(errorResponse, token);
             };
 
             // Définition d'une politique nommée "fixed"
             options.AddFixedWindowLimiter("fixed", limiterOptions =>
             {
-                limiterOptions.PermitLimit = 100; // Max 10 requêtes
+                limiterOptions.PermitLimit = 100; // Max requêtes par l'ensemble des utilisateurs
                 limiterOptions.Window = TimeSpan.FromSeconds(10); // Toutes les 10 secondes
                 limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                 limiterOptions.QueueLimit = 0; // Pas de file d'attente
