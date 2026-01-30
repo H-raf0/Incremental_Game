@@ -46,3 +46,5 @@ copilot-messages.log
 # System files
 .DS_Store
 .project/attachments/files/**
+# Local tools and report generator
+.tools/
