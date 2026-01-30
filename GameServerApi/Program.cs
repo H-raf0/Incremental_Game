@@ -71,6 +71,7 @@ public class Program
         builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<GameService>();
         builder.Services.AddScoped<InventoryService>();
+        builder.Services.AddScoped<PassiveIncomeService>();
 
         builder.Services.AddCors(options =>
             {
@@ -91,7 +92,7 @@ public class Program
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 context.HttpContext.Response.ContentType = "application/json";
-                await context.HttpContext.Response.WriteAsync("{\"error\": \"Too Many Requests\", \"message\": \"Rate limit exceeded\"}", token);
+                await context.HttpContext.Response.WriteAsync("{\"error\": \"TOO_MANY_REQUESTS\", \"message\": \"Rate limit exceeded\"}", token);
             };
 
             // Définition d'une politique nommée "fixed"
