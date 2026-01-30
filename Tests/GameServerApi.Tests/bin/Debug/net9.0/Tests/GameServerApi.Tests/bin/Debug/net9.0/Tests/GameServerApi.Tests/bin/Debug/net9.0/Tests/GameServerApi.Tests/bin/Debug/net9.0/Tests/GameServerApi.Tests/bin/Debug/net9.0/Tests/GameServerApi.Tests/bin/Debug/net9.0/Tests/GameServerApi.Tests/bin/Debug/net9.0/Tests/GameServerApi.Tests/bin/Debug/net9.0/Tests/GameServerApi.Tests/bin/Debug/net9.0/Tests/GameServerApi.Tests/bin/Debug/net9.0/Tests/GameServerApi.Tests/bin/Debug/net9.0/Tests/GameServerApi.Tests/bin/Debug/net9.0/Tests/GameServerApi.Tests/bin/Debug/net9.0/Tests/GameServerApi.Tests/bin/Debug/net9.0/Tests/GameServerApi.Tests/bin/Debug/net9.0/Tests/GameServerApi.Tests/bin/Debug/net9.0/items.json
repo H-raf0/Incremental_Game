@@ -1,0 +1,37 @@
+[
+    {
+        "id": 1,
+        "name": "Cursor",
+        "price": 10,
+        "maxQuantity": 100,
+        "clickValue": 1
+    },
+    {
+        "id": 2,
+        "name": "Keyboard",
+        "price": 50,
+        "maxQuantity": 50,
+        "clickValue": 5
+    },
+    {
+        "id": 3,
+        "name": "Mouse",
+        "price": 100,
+        "maxQuantity": 25,
+        "clickValue": 10
+    },
+    {
+        "id": 4,
+        "name": "Monitor",
+        "price": 500,
+        "maxQuantity": 10,
+        "clickValue": 50
+    },
+    {
+        "id": 5,
+        "name": "Computer",
+        "price": 2000,
+        "maxQuantity": 5,
+        "clickValue": 200
+    }
+]

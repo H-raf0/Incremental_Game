@@ -2,8 +2,10 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using Xunit;
 using GameServerApi.Models;
 using GameServerApi.Services;
@@ -26,7 +28,8 @@ public class InventoryIntegrationTests : IClassFixture<WebApplicationFactory<Pro
 
                 services.AddDbContext<ApplicationDbContext>(options =>
                 {
-                    options.UseInMemoryDatabase("IntegrationTestDb");
+                    options.UseInMemoryDatabase("IntegrationTestDb")
+                           .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning));
                 });
             });
         });
@@ -71,11 +74,16 @@ public class InventoryIntegrationTests : IClassFixture<WebApplicationFactory<Pro
         // Assert
         Assert.NotNull(entry);
 
-        var updatedProgression = await db.Progressions.FirstOrDefaultAsync(p => p.UserId == user.Id);
-        Assert.Equal(150, updatedProgression.Count);
+        // Use a fresh scope/db context to read updated values (avoid cached tracked entities)
+        using var readScope = _factory.Services.CreateScope();
+        var readDb = readScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var updatedProgression = await readDb.Progressions.FirstOrDefaultAsync(p => p.UserId == user.Id);
+        Assert.NotNull(updatedProgression);
+        Assert.Equal(150, updatedProgression!.Count);
         Assert.Equal(5, updatedProgression.totalClickValue);
 
-        var invEntry = await db.InventoryEntries.FirstOrDefaultAsync(e => e.UserId == user.Id && e.ItemId == item.Id);
+        var invEntry = await readDb.InventoryEntries.FirstOrDefaultAsync(e => e.UserId == user.Id && e.ItemId == item.Id);
         Assert.NotNull(invEntry);
         Assert.Equal(1, invEntry.Quantity);
     }
