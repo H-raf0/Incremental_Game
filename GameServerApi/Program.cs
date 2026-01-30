@@ -73,6 +73,9 @@ public class Program
         builder.Services.AddScoped<InventoryService>();
         builder.Services.AddScoped<PassiveIncomeService>();
 
+        // Register the background service for passive income
+        builder.Services.AddHostedService<MyWorker>();
+
         builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowSpecific", builder => 
