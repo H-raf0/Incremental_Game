@@ -101,7 +101,15 @@ namespace GameServerApi.Controllers
             return user;
         }
 
-
+        // POST api/<UserController>/RefreshToken
+        [HttpPost("RefreshToken")]
+        [AllowAnonymous]
+        public async Task<object> RefreshToken([FromBody] TokenRequest request)
+        {
+            _logger.LogInformation("Token refresh attempt");
+            var (newTokenResponse, user) = await _userService.RefreshTokenAsync(request.RefreshToken);
+            return new { token = newTokenResponse, user };
+        }
 
         // DELETE api/<UserController>/{id}
         [HttpDelete("{id}")]

@@ -19,21 +19,26 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        // Configuration JWT
+        builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
+                
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ClockSkew = TimeSpan.FromMinutes(10), // Temps de tolérance pour la date d'expiration
-                    ValidateLifetime = true, // Vérifie la date d'expiration
-                    ValidateIssuerSigningKey = true, // Vérifie la signature
-                    ValidAudience = "localhost:5000", // Qui peut utiliser le token ici c'est notre API
-                    ValidIssuer = "localhost:5000", // Qui émet le token ici c'est notre API
+                    ClockSkew = TimeSpan.FromMinutes(5), // 5 min de tolérance
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidAudience = jwtSettings?.Audience ?? "incremental-game-client",
+                    ValidIssuer = jwtSettings?.Issuer ?? "incremental-game-api",
                     IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes("TheSecretKeyThatShouldBeStoredInTheConfiguration")
+                        Encoding.UTF8.GetBytes(jwtSettings?.Key ?? string.Empty)
                     ),
-                    RoleClaimType = ClaimTypes.Role // Dans quel claim est stocké le role
+                    RoleClaimType = ClaimTypes.Role
                 };
             });
         builder.Services.AddAuthorization();
@@ -51,6 +56,9 @@ public class Program
         builder.Services.AddScoped<UserService>();
         builder.Services.AddScoped<GameService>();
         builder.Services.AddScoped<InventoryService>();
+
+        // Enregistrer le service de revenu passif
+        builder.Services.AddHostedService<PassiveIncomeService>();
 
         builder.Services.AddCors(options =>
             {
@@ -86,11 +94,11 @@ public class Program
             // Politique par utilisateur pour les clics
             options.AddPolicy("perUser", context =>
             {
-                var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "anonymous";
-                return RateLimitPartition.GetFixedWindowLimiter(userId, _ => new FixedWindowRateLimiterOptions
+                var username = context.User.Identity?.Name ?? context.Connection.RemoteIpAddress?.ToString();
+                return RateLimitPartition.GetFixedWindowLimiter(username, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 10, // Max 10 clics par seconde par utilisateur
-                    Window = TimeSpan.FromSeconds(1),
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromSeconds(10),
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                     QueueLimit = 0
                 });
@@ -110,7 +118,6 @@ public class Program
         }
         app.UseCors("AllowSpecific");
         app.UseRateLimiter();
-        app.UseMiddleware<RequestLoggingMiddleware>();
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();

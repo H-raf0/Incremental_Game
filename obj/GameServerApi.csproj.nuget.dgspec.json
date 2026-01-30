@@ -67,6 +67,14 @@
               "target": "Package",
               "version": "[9.*, )"
             },
+            "Moq": {
+              "target": "Package",
+              "version": "[4.20.70, )"
+            },
+            "Newtonsoft.Json": {
+              "target": "Package",
+              "version": "[13.0.3, )"
+            },
             "Scalar.AspNetCore": {
               "target": "Package",
               "version": "[2.9.0, )"
@@ -91,7 +99,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/9.0.112/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/9.0.113/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

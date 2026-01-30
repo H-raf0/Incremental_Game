@@ -61,7 +61,7 @@ namespace GameServerApi.Services
             return admins.Select(u => new UserPublic(u.Id, u.Username, u.Role));
         }
 
-        public async Task<(string Token, UserPublic User)> RegisterUserAsync(UserPass newUser)
+        public async Task<(TokenResponse Token, UserPublic User)> RegisterUserAsync(UserPass newUser)
         {
             _logger.LogInformation("User registration attempt: {Username}", newUser.Username);
             
@@ -86,9 +86,19 @@ namespace GameServerApi.Services
                 _context.Progressions.Add(progression);
                 await _context.SaveChangesAsync();
 
-                var token = _jwtService.GenerateToken(user);
+                var tokenResponse = _jwtService.GenerateTokens(user);
+                
+                // Sauvegarde le refresh token en BD
+                var refreshToken = new RefreshToken(
+                    user.Id,
+                    tokenResponse.RefreshToken,
+                    DateTime.UtcNow.AddDays(7)
+                );
+                _context.RefreshTokens.Add(refreshToken);
+                await _context.SaveChangesAsync();
+
                 _logger.LogInformation("User registered successfully: {Username} with role {Role}", user.Username, user.Role);
-                return (token, new UserPublic(user.Id, user.Username, user.Role));
+                return (tokenResponse, new UserPublic(user.Id, user.Username, user.Role));
             }
             catch
             {
@@ -97,7 +107,7 @@ namespace GameServerApi.Services
             }
         }
 
-        public async Task<(string Token, UserPublic User)> LoginAsync(UserPass userPass)
+        public async Task<(TokenResponse Token, UserPublic User)> LoginAsync(UserPass userPass)
         {
             _logger.LogInformation("User login attempt: {Username}", userPass.Username);
             
@@ -115,9 +125,19 @@ namespace GameServerApi.Services
                 throw new GameException("invalid password", "INVALID_PASSWORD", 401);
             }
 
-            var token = _jwtService.GenerateToken(user);
+            var tokenResponse = _jwtService.GenerateTokens(user);
+            
+            // Sauvegarde le refresh token en BD
+            var refreshToken = new RefreshToken(
+                user.Id,
+                tokenResponse.RefreshToken,
+                DateTime.UtcNow.AddDays(7)
+            );
+            _context.RefreshTokens.Add(refreshToken);
+            await _context.SaveChangesAsync();
+
             _logger.LogInformation("User logged in successfully: {Username}", userPass.Username);
-            return (token, new UserPublic(user.Id, user.Username, user.Role));
+            return (tokenResponse, new UserPublic(user.Id, user.Username, user.Role));
         }
 
         public async Task<User> UpdateUserAsync(int id, UserUpdate userUpdate)
@@ -165,6 +185,43 @@ namespace GameServerApi.Services
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             _logger.LogInformation("User deleted successfully: UserId {UserId}", id);
+        }
+
+        public async Task<(TokenResponse Token, UserPublic User)> RefreshTokenAsync(string refreshToken)
+        {
+            _logger.LogInformation("Token refresh attempt");
+
+            var storedToken = await _context.RefreshTokens
+                .FirstOrDefaultAsync(rt => rt.Token == refreshToken);
+
+            if (storedToken == null || !storedToken.IsValid())
+            {
+                _logger.LogWarning("Token refresh failed: Invalid or expired refresh token");
+                throw new GameException("Invalid refresh token", "INVALID_REFRESH_TOKEN", 401);
+            }
+
+            var user = await _context.Users.FindAsync(storedToken.UserId);
+            if (user == null)
+            {
+                _logger.LogWarning("Token refresh failed: User not found");
+                throw new GameException("User not found", "USER_NOT_FOUND", 404);
+            }
+
+            // Invalider l'ancien refresh token
+            storedToken.IsRevoked = true;
+
+            // Générer les nouveaux tokens
+            var newTokenResponse = _jwtService.GenerateTokens(user);
+            var newRefreshToken = new RefreshToken(
+                user.Id,
+                newTokenResponse.RefreshToken,
+                DateTime.UtcNow.AddDays(7)
+            );
+            _context.RefreshTokens.Add(newRefreshToken);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Token refreshed successfully for user {UserId}", user.Id);
+            return (newTokenResponse, new UserPublic(user.Id, user.Username, user.Role));
         }
     }
 }

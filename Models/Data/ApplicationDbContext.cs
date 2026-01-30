@@ -23,6 +23,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<Progression> Progressions { get; set; } = null!;
     public DbSet<Item> Items { get; set; } = null!;
     public DbSet<InventoryEntry> InventoryEntries { get; set; } = null!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
