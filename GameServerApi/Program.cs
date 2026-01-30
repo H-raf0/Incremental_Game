@@ -35,6 +35,26 @@ public class Program
                     ),
                     RoleClaimType = ClaimTypes.Role // Dans quel claim est stocké le role
                 };
+                
+                // Handle authorization and authentication failures for JWT
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        context.Response.ContentType = "application/json";
+                        var errorResponse = new { error = "Unauthorized", code = "UNAUTHORIZED", message = "Authentication required or token invalid" };
+                        await context.Response.WriteAsJsonAsync(errorResponse);
+                    },
+                    OnForbidden = async context =>
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        context.Response.ContentType = "application/json";
+                        var errorResponse = new { error = "Forbidden", code = "FORBIDDEN", message = "You do not have permission to access this resource" };
+                        await context.Response.WriteAsJsonAsync(errorResponse);
+                    }
+                };
             });
         builder.Services.AddAuthorization();
 
@@ -114,6 +134,26 @@ public class Program
         app.UseMiddleware<ErrorHandlingMiddleware>();
         app.UseAuthentication();
         app.UseAuthorization();
+        
+        // Handle authorization policy failures with JSON response
+        app.Use(async (context, next) =>
+        {
+            await next();
+            
+            if (context.Response.StatusCode == StatusCodes.Status403Forbidden)
+            {
+                context.Response.ContentType = "application/json";
+                var errorResponse = new { error = "Forbidden", code = "FORBIDDEN", message = "You do not have permission to access this resource" };
+                await context.Response.WriteAsJsonAsync(errorResponse);
+            }
+            else if (context.Response.StatusCode == StatusCodes.Status401Unauthorized)
+            {
+                context.Response.ContentType = "application/json";
+                var errorResponse = new { error = "Unauthorized", code = "UNAUTHORIZED", message = "Authentication required or token invalid" };
+                await context.Response.WriteAsJsonAsync(errorResponse);
+            }
+        });
+        
         app.MapControllers();
 
         app.Logger.LogInformation("Application initialization complete");
