@@ -291,6 +291,7 @@ __pycache__/
 
 # my project useless files
 GameServerApi/bin/
+GameServerApi/Migrations/
 GameServerApi/obj/
 GameServerApi.Tests/obj/
 
