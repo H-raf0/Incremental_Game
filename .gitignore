@@ -53,9 +53,7 @@ copilot-messages.log
 **/bin/
 **/obj/
 
-# Coverage output
-coveragereport/
-coverage.cobertura.xml
+
 
 # Test results and tools
 TestResults/
