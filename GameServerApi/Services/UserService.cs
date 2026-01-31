@@ -61,7 +61,7 @@ namespace GameServerApi.Services
             return admins.Select(u => new UserPublic(u.Id, u.Username, u.Role));
         }
 
-        public async Task<(string Token, UserPublic User)> RegisterUserAsync(UserPass newUser)
+        public async Task<(string Token, UserPublic User)> RegisterAsync(UserPass newUser)
         {
             _logger.LogInformation("User registration attempt: {Username}", newUser.Username);
             

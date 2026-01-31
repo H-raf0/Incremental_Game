@@ -73,7 +73,7 @@ namespace GameServerApi.Controllers
         public async Task<object> RegisterUser([FromBody] UserPass newUser)
         {
             _logger.LogInformation("Register attempt for username {Username}", newUser.Username);
-            var (Token, User) = await _userService.RegisterUserAsync(newUser);
+            var (Token, User) = await _userService.RegisterAsync(newUser);
 
             _logger.LogInformation("User registered {Username} (Id: {UserId})", User.Username, User.Id);
             return new { token = Token, user = User };
