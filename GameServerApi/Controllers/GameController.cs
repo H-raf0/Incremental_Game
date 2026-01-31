@@ -74,7 +74,7 @@ namespace GameServerApi.Controllers
         // GET /api/Game/ResetCost
         [HttpGet("ResetCost")]
         [Authorize]
-        public async Task<int> ResetCost()
+        public async Task<ResetCostResponse> ResetCost()
         {
             var userId = GetUserId();
 
