@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using System.IO;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -99,6 +100,33 @@ namespace GameServerApi.Tests
         }
 
         [Fact]
+        public async Task BuyItemAsync_Throws_WhenInventoryFull()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var user = new User("tester", "password", Role.USER);
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            var progression = new Progression(user.Id) { Count = 500 };
+            context.Progressions.Add(progression);
+
+            var item = new Item(1, "LimitedItem", 50, 10, 2);
+            context.Items.Add(item);
+
+            var existingEntry = new InventoryEntry(user.Id, item.Id, 10);
+            context.InventoryEntries.Add(existingEntry);
+
+            await context.SaveChangesAsync();
+
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.BuyItemAsync(user.Id, item.Id);
+            });
+        }
+
+        [Fact]
         public async Task GetAllItemsAsync_ReturnsItems_WhenItemsExist()
         {
             var context = CreateContext(Guid.NewGuid().ToString());
@@ -114,6 +142,55 @@ namespace GameServerApi.Tests
             var items = await service.GetAllItemsAsync();
 
             Assert.Equal(2, items.Length);
+        }
+
+        [Fact]
+        public async Task GetAllItemsAsync_Throws_WhenNoItems()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.GetAllItemsAsync();
+            });
+        }
+
+        [Fact]
+        public async Task GetItemByIdAsync_ReturnsItem_WhenExists()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            context.Items.Add(new Item(7, "FindMe", 20, 2, 1));
+            await context.SaveChangesAsync();
+
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            var item = await service.GetItemByIdAsync(7);
+
+            Assert.Equal("FindMe", item.Name);
+        }
+
+        [Fact]
+        public async Task GetItemByIdAsync_Throws_WhenNotFound()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.GetItemByIdAsync(999);
+            });
+        }
+
+        [Fact]
+        public async Task GetUsernameAsync_ReturnsUnknown_WhenUserMissing()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            var username = await service.GetUsernameAsync(999);
+
+            Assert.Equal("Unknown", username);
         }
 
         [Fact]
@@ -135,6 +212,85 @@ namespace GameServerApi.Tests
             var inventory = await service.GetUserInventoryAsync(user.Id);
 
             Assert.Equal(2, inventory.Length);
+        }
+
+        [Fact]
+        public async Task SeedInventoryAsync_LoadsItemsFromJson()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            var originalDir = Directory.GetCurrentDirectory();
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            var baseDir = AppContext.BaseDirectory;
+            var baseItemsPath = Path.Combine(baseDir, "items.json");
+            var baseItemsBackup = Path.Combine(baseDir, "items.json.bak");
+            try
+            {
+                if (File.Exists(baseItemsPath))
+                {
+                    File.Move(baseItemsPath, baseItemsBackup);
+                }
+
+                Directory.SetCurrentDirectory(tempDir);
+                await File.WriteAllTextAsync(
+                    Path.Combine(tempDir, "items.json"),
+                    "[{\"id\":1,\"name\":\"A\",\"price\":10,\"maxQuantity\":2,\"clickValue\":1}]"
+                );
+
+                await service.SeedInventoryAsync();
+
+                var items = await context.Items.ToListAsync();
+                Assert.Single(items);
+                Assert.Equal("A", items[0].Name);
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDir);
+                if (File.Exists(baseItemsBackup))
+                {
+                    File.Move(baseItemsBackup, baseItemsPath);
+                }
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task SeedInventoryAsync_Throws_WhenJsonMissing()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            var originalDir = Directory.GetCurrentDirectory();
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            var baseDir = AppContext.BaseDirectory;
+            var baseItemsPath = Path.Combine(baseDir, "items.json");
+            var baseItemsBackup = Path.Combine(baseDir, "items.json.bak");
+            try
+            {
+                if (File.Exists(baseItemsPath))
+                {
+                    File.Move(baseItemsPath, baseItemsBackup);
+                }
+
+                Directory.SetCurrentDirectory(tempDir);
+
+                await Assert.ThrowsAsync<GameException>(async () =>
+                {
+                    await service.SeedInventoryAsync();
+                });
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDir);
+                if (File.Exists(baseItemsBackup))
+                {
+                    File.Move(baseItemsBackup, baseItemsPath);
+                }
+                Directory.Delete(tempDir, true);
+            }
         }
 
         [Fact]

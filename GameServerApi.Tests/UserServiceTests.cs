@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Configuration;
@@ -109,6 +110,117 @@ namespace GameServerApi.Tests
             {
                 await service.LoginAsync(new UserPass("loginUser2", "WrongPassword"));
             });
+        }
+
+        [Fact]
+        public async Task GetAllUsersAsync_ReturnsPublicUsers()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            context.Users.Add(new User("u1", "pwd", Role.USER));
+            context.Users.Add(new User("u2", "pwd", Role.ADMIN));
+            await context.SaveChangesAsync();
+
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            var users = await service.GetAllUsersAsync();
+
+            Assert.Equal(2, users.Count);
+        }
+
+        [Fact]
+        public async Task GetUserByIdAsync_Throws_WhenMissing()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.GetUserByIdAsync(999);
+            });
+        }
+
+        [Fact]
+        public async Task SearchUsersAsync_IsCaseInsensitive()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            context.Users.Add(new User("AlphaUser", "pwd", Role.USER));
+            context.Users.Add(new User("beta", "pwd", Role.USER));
+            await context.SaveChangesAsync();
+
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            var results = await service.SearchUsersAsync("ALPHA");
+
+            Assert.Single(results);
+            Assert.Equal("AlphaUser", results.First().Username);
+        }
+
+        [Fact]
+        public async Task SearchUsersAsync_ReturnsEmpty_WhenNameBlank()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            var results = await service.SearchUsersAsync("  ");
+
+            Assert.Empty(results);
+        }
+
+        [Fact]
+        public async Task GetAllAdminUsersAsync_ReturnsOnlyAdmins()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            context.Users.Add(new User("admin", "pwd", Role.ADMIN));
+            context.Users.Add(new User("user", "pwd", Role.USER));
+            await context.SaveChangesAsync();
+
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            var admins = await service.GetAllAdminUsersAsync();
+
+            Assert.Single(admins);
+            Assert.Equal("admin", admins.First().Username);
+        }
+
+        [Fact]
+        public async Task UpdateUserAsync_UpdatesFields()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var user = new User("old", "pwd", Role.USER);
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            var update = new UserUpdate("newname", "newpass", Role.ADMIN);
+            var updated = await service.UpdateUserAsync(user.Id, update);
+
+            Assert.Equal("newname", updated.Username);
+            Assert.Equal(Role.ADMIN, updated.Role);
+            Assert.True(updated.VerifyPassword("newpass"));
+        }
+
+        [Fact]
+        public async Task DeleteUserAsync_RemovesUser()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var user = new User("todelete", "pwd", Role.USER);
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            await service.DeleteUserAsync(user.Id);
+
+            var removed = await context.Users.FindAsync(user.Id);
+            Assert.Null(removed);
         }
     }
 }

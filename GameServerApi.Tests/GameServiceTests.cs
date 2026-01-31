@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using GameServerApi.Services;
 using GameServerApi.Models;
+using GameServerApi.Exceptions;
 
 namespace GameServerApi.Tests
 {
@@ -95,6 +96,51 @@ namespace GameServerApi.Tests
         }
 
         [Fact]
+        public async Task GetProgressionAsync_ReturnsProgression_WhenExists()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var userId = 15;
+            var progression = new Progression(userId) { Count = 42 };
+            context.Progressions.Add(progression);
+            await context.SaveChangesAsync();
+
+            var service = new GameService(context, new NullLogger<GameService>());
+
+            var result = await service.GetProgressionAsync(userId);
+
+            Assert.Equal(42, result.Count);
+            Assert.Equal(userId, result.UserId);
+        }
+
+        [Fact]
+        public async Task GetProgressionAsync_Throws_WhenNotFound()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new GameService(context, new NullLogger<GameService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.GetProgressionAsync(404);
+            });
+        }
+
+        [Fact]
+        public async Task ClickAsync_CapsAtIntMaxValue()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var userId = 16;
+            var progression = new Progression(userId) { Count = int.MaxValue, Multiplier = 1, TotalClickValue = 0 };
+            context.Progressions.Add(progression);
+            await context.SaveChangesAsync();
+
+            var service = new GameService(context, new NullLogger<GameService>());
+
+            var response = await service.ClickAsync(userId);
+
+            Assert.Equal(int.MaxValue, response.Count);
+        }
+
+        [Fact]
         public async Task ResetProgressionAsync_Succeeds_UpdatesBestScoreAndClearsInventory()
         {
             var context = CreateContext(Guid.NewGuid().ToString());
@@ -118,6 +164,18 @@ namespace GameServerApi.Tests
         }
 
         [Fact]
+        public async Task ResetProgressionAsync_Throws_WhenNoProgression()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new GameService(context, new NullLogger<GameService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.ResetProgressionAsync(999);
+            });
+        }
+
+        [Fact]
         public async Task ResetProgressionAsync_Throws_WhenInsufficientClicks()
         {
             var context = CreateContext(Guid.NewGuid().ToString());
@@ -131,6 +189,18 @@ namespace GameServerApi.Tests
             await Assert.ThrowsAsync<GameServerApi.Exceptions.GameException>(async () =>
             {
                 await service.ResetProgressionAsync(userId);
+            });
+        }
+
+        [Fact]
+        public async Task GetResetCostAsync_Throws_WhenNoProgression()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new GameService(context, new NullLogger<GameService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.GetResetCostAsync(123);
             });
         }
 
