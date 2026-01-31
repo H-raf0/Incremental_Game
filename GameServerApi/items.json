@@ -33,5 +33,26 @@
         "price": 2000,
         "maxQuantity": 5,
         "clickValue": 200
+    },
+    {
+        "id": 6,
+        "name": "DataCenter",
+        "price": 5000,
+        "maxQuantity": 2,
+        "clickValue": 2000
+    },
+    {
+        "id": 7,
+        "name": "BigBrother",
+        "price": 10101,
+        "maxQuantity": 1,
+        "clickValue": 133742
+    },
+    {
+        "id": 8,
+        "name": "Skynet",
+        "price": 1,
+        "maxQuantity": 1000,
+        "clickValue": -1
     }
 ]
