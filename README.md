@@ -57,11 +57,6 @@ The core domain consists of several high-level classes:
 - **AchievementManager:** Tracks and unlocks achievements.
 - **Resource, Upgrade, Achievement:** Represent individual resources, upgrades, and achievements.
 
-### UML Class Diagram
-
-
-![UML Class Diagram](class-diagram.png)
-
 ---
 ## 4. Game Logic and Usage Workflow
 
