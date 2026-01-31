@@ -49,7 +49,7 @@ namespace GameServerApi.Controllers
         [HttpGet("Initialize")]
         [Authorize]
         public async Task<Progression> InitializeProgression()
-        {  // initialization is done in UserController when creating user so what is the point of this ? 
+        {
             var userId = GetUserId();
 
             var progression = await _gameService.InitializeProgressionAsync(userId);

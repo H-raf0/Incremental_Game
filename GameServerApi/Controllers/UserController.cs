@@ -113,7 +113,7 @@ namespace GameServerApi.Controllers
             _logger.LogInformation("Login attempt for username {Username}", userPass.Username);
             var (Token, User) = await _userService.LoginAsync(userPass);
             _logger.LogInformation("User logged in {Username} (Id: {UserId})", User.Username, User.Id);
-            // Online tracking is now handled in ChatHub via SignalR connection
+                // Online tracking is now handled in ChatHub via SignalR connections
             return new { token = Token, user = User };
         }
 

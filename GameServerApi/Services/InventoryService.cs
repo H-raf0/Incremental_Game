@@ -161,6 +161,7 @@ namespace GameServerApi.Services
                     _context.InventoryEntries.Add(inventoryEntry);
                 }
 
+                // Deduct the item price and add its click value bonus
                 progression.Count -= item.Price;
                 progression.TotalClickValue += item.ClickValue;
 
@@ -170,8 +171,8 @@ namespace GameServerApi.Services
                 
                 _logger.LogInformation("Item purchased successfully: UserId {UserId}, ItemId {ItemId}, ItemName: {ItemName}, Quantity: {Quantity}", userId, itemId, item.Name, inventoryEntry.Quantity);
 
-                // If the purchased item is expensive, announce it in the chat
-                if (item.Price > 1000 && _hubContext != null)
+                // Announce expensive items (over 10000 price) in the chat
+                if (item.Price > 10000 && _hubContext != null)
                 {
                     var usernameMsg = user?.Username ?? "Unknown";
                     await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{usernameMsg} vient d'acquérir {item.Name} !");

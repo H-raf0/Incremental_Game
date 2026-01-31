@@ -20,7 +20,7 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Ajouter les services SignalR
+        // Add SignalR services
         builder.Services.AddSignalR();
 
         builder.Services

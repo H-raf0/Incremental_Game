@@ -12,7 +12,7 @@ namespace GameServerApi.Services
         private readonly ILogger<GameService> _logger;
         private readonly IHubContext<ChatHub>? _hubContext;
 
-        // Cache du high score
+        // Cache of the high score
         private static long _cachedHighScore = 0;
         private static int _cachedHighScoreUserId = 0;
         private static string _cachedHighScoreUsername = "";
@@ -177,18 +177,18 @@ namespace GameServerApi.Services
             }
             await _context.SaveChangesAsync();
 
-            // Vérifier si c'est un nouveau record d'un AUTRE utilisateur (pas de spam du même user)
+            // Check if this is a new high score from a DIFFERENT user (prevents spam from same user)
             if (progression.Count > _cachedHighScore && userId != _cachedHighScoreUserId)
             {
                 _cachedHighScore = progression.Count;
                 _cachedHighScoreUserId = userId;
 
-                // Récupérer le username
+                // Retrieve the username
                 var user = await _context.Users.FindAsync(userId);
                 _cachedHighScoreUsername = user?.Username ?? "Unknown";
                 _logger.LogInformation("New High Score! UserId {UserId}, Username: {Username}, Score: {Score}", userId, _cachedHighScoreUsername, _cachedHighScore);
 
-                // Envoyer la notification à tous les clients
+                // Notify all clients
                 if (_hubContext != null)
                 {
                     await _hubContext.Clients.All.SendAsync("NewHighScore", _cachedHighScoreUsername, _cachedHighScore);

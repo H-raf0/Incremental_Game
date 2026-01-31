@@ -35,7 +35,7 @@ public class ErrorHandlingMiddleware
             var errorResponse = new ErrorResponse(gameEx.Message, gameEx.Code);
             _logger.LogError(exception, "GameException handled: {Code} - {Message}", gameEx.Code, gameEx.Message);
 
-            // JsonSerializer.Serialize est appelé automatiquement par WriteAsJsonAsync
+            // JsonSerializer.Serialize is automatically called by WriteAsJsonAsync
             await context.Response.WriteAsJsonAsync(errorResponse, options);
         }
         else
