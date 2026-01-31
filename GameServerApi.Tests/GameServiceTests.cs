@@ -48,7 +48,7 @@ namespace GameServerApi.Tests
 
             var cost = await service.GetResetCostAsync(userId);
 
-            Assert.Equal(100, cost);
+            Assert.Equal(100, cost.Cost);
         }
 
         [Fact]
