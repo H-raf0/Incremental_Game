@@ -15,6 +15,10 @@ public class MyWorker : BackgroundService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Executes the background service for distributing passive income.
+    /// </summary>
+    /// <param name="stoppingToken">Cancellation token to stop the service.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("MyWorker (Passive Income) started");

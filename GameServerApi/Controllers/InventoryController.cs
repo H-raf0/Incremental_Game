@@ -31,6 +31,11 @@ namespace GameServerApi.Controllers
             _hubContext = hubContext;
         }
 
+        /// <summary>
+        /// Extracts the user ID from the JWT claims.
+        /// </summary>
+        /// <returns>The user ID from the NameIdentifier claim.</returns>
+        /// <exception cref="GameException">Thrown when the token is invalid or user ID cannot be parsed.</exception>
         private int GetUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -41,7 +46,10 @@ namespace GameServerApi.Controllers
             return userId;
         }
 
-        // GET /api/Inventory/Seed
+        /// <summary>
+        /// Seeds the inventory database with items from the items.json file.
+        /// </summary>
+        /// <returns>A boolean indicating success.</returns>
         [HttpGet("Seed")]
         [AllowAnonymous]
         public async Task<bool> SeedInventory()
@@ -52,7 +60,10 @@ namespace GameServerApi.Controllers
             return true;
         }
 
-        //GET /api/Inventory/Items
+        /// <summary>
+        /// Retrieves all available items in the inventory.
+        /// </summary>
+        /// <returns>An array of all items.</returns>
         [HttpGet("Items")]
         [AllowAnonymous]
         public async Task<Item[]> GetAllItems()
@@ -62,7 +73,12 @@ namespace GameServerApi.Controllers
             return items;
         }
 
-        //POST /api/Inventory/Buy/{itemId}
+        /// <summary>
+        /// Purchases an item for the current user.
+        /// </summary>
+        /// <param name="itemId">The ID of the item to purchase.</param>
+        /// <returns>The created or updated inventory entry.</returns>
+        /// <remarks>Expensive items (over 10000 price) trigger a system announcement in chat.</remarks>
         [HttpPost("Buy/{itemId}")]
         [EnableRateLimiting("perUser")]
         public async Task<InventoryEntry> BuyItem(int itemId)
@@ -83,7 +99,10 @@ namespace GameServerApi.Controllers
             return entry;
         }
 
-        //GET /api/Inventory/UserInventory
+        /// <summary>
+        /// Retrieves the inventory for the current authenticated user.
+        /// </summary>
+        /// <returns>An array of inventory entries for the user.</returns>
         [HttpGet("UserInventory")]
         [Authorize]
         public async Task<InventoryEntry[]> UserInventory()

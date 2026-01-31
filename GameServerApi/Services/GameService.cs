@@ -24,6 +24,12 @@ namespace GameServerApi.Services
             _hubContext = hubContext;
         }
 
+        /// <summary>
+        /// Initializes a new game progression for a user.
+        /// </summary>
+        /// <param name="userId">The ID of the user to initialize progression for.</param>
+        /// <returns>The newly created progression object.</returns>
+        /// <exception cref="GameException">Thrown if progression already exists or initialization fails.</exception>
         public async Task<Progression> InitializeProgressionAsync(int userId)
         {
             bool exists = await _context.Progressions.AnyAsync(p => p.UserId == userId);
@@ -44,6 +50,13 @@ namespace GameServerApi.Services
                 throw new GameException("Failed to initialize", "INITIALIZATION_FAILED", 500);
             }
         }
+
+        /// <summary>
+        /// Retrieves the game progression for a specific user.
+        /// </summary>
+        /// <param name="userId">The ID of the user.</param>
+        /// <returns>The user's progression object.</returns>
+        /// <exception cref="GameException">Thrown if no progression is found for the user.</exception>
         public async Task<Progression> GetProgressionAsync(int userId)
         {
             var progression = await _context.Progressions
@@ -58,6 +71,12 @@ namespace GameServerApi.Services
             return progression;
         }
 
+        /// <summary>
+        /// Resets the game progression for a user, incrementing their multiplier and clearing items.
+        /// </summary>
+        /// <param name="userId">The ID of the user whose progression should be reset.</param>
+        /// <returns>The reset progression object.</returns>
+        /// <exception cref="GameException">Thrown if no progression exists or insufficient clicks to reset.</exception>
         public async Task<Progression> ResetProgressionAsync(int userId)
         {
             _logger.LogInformation("Progression reset attempt: UserId {UserId}", userId);
@@ -106,6 +125,12 @@ namespace GameServerApi.Services
             return progression;
         }
 
+        /// <summary>
+        /// Calculates and returns the cost to reset the user's progression.
+        /// </summary>
+        /// <param name="userId">The ID of the user.</param>
+        /// <returns>A response containing the reset cost.</returns>
+        /// <exception cref="GameException">Thrown if no progression is found for the user.</exception>
         public async Task<ResetCostResponse> GetResetCostAsync(int userId)
         {
             var progression = await _context.Progressions
@@ -121,6 +146,12 @@ namespace GameServerApi.Services
             return new ResetCostResponse(cost);
         }
 
+        /// <summary>
+        /// Processes a click action for a user, updating their score and checking for high score records.
+        /// </summary>
+        /// <param name="userId">The ID of the user clicking.</param>
+        /// <returns>A response containing the updated count and multiplier.</returns>
+        /// <exception cref="GameException">Thrown if no progression is found for the user.</exception>
         public async Task<ClickResponse> ClickAsync(int userId)
         {
             _logger.LogDebug("Click event: UserId {UserId}", userId);
@@ -168,6 +199,11 @@ namespace GameServerApi.Services
             return new ClickResponse(progression.Count, progression.Multiplier);
         }
 
+        /// <summary>
+        /// Retrieves the best score achieved by any user.
+        /// </summary>
+        /// <returns>A response containing the user ID and best score.</returns>
+        /// <exception cref="GameException">Thrown if no progressions exist.</exception>
         public async Task<BestScoreResponse> GetBestScoreAsync()
         {
             var bestProgression = await _context.Progressions

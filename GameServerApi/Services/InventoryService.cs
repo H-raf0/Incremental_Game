@@ -23,6 +23,10 @@ namespace GameServerApi.Services
             _hubContext = hubContext;
         }
 
+        /// <summary>
+        /// Seeds the inventory database by loading items from items.json file.
+        /// </summary>
+        /// <exception cref="GameException">Thrown if items.json cannot be found or parsed.</exception>
         public async Task SeedInventoryAsync()
         {
             _logger.LogInformation("Inventory seeding started");
@@ -72,6 +76,11 @@ namespace GameServerApi.Services
             }
         }
 
+        /// <summary>
+        /// Retrieves all available items.
+        /// </summary>
+        /// <returns>An array of all items.</returns>
+        /// <exception cref="GameException">Thrown if no items are found.</exception>
         public async Task<Item[]> GetAllItemsAsync()
         {
             var items = await _context.Items.ToArrayAsync();
@@ -82,20 +91,36 @@ namespace GameServerApi.Services
             return items;
         }
 
-        // Get item by id
+        /// <summary>
+        /// Retrieves a specific item by its ID.
+        /// </summary>
+        /// <param name="itemId">The ID of the item to retrieve.</param>
+        /// <returns>The item object.</returns>
+        /// <exception cref="GameException">Thrown if item is not found.</exception>
         public async Task<Item> GetItemByIdAsync(int itemId)
         {
             var item = await _context.Items.FindAsync(itemId) ?? throw new GameException("Item not found", "ITEM_NOT_FOUND", 404);
             return item;
         }
 
-        // Get username for a user id
+        /// <summary>
+        /// Retrieves the username for a given user ID.
+        /// </summary>
+        /// <param name="userId">The ID of the user.</param>
+        /// <returns>The username, or "Unknown" if user not found.</returns>
         public async Task<string> GetUsernameAsync(int userId)
         {
             var user = await _context.Users.FindAsync(userId);
             return user?.Username ?? "Unknown";
         }
 
+        /// <summary>
+        /// Purchases an item for a user with transaction support.
+        /// </summary>
+        /// <param name="userId">The ID of the user purchasing the item.</param>
+        /// <param name="itemId">The ID of the item to purchase.</param>
+        /// <returns>The inventory entry (new or updated).</returns>
+        /// <exception cref="GameException">Thrown if user not found, insufficient funds, or inventory full.</exception>
         public async Task<InventoryEntry> BuyItemAsync(int userId, int itemId)
         {
             _logger.LogInformation("Item purchase attempt: UserId {UserId}, ItemId {ItemId}", userId, itemId);
@@ -162,6 +187,12 @@ namespace GameServerApi.Services
             }
         }
 
+        /// <summary>
+        /// Retrieves all inventory entries for a specific user.
+        /// </summary>
+        /// <param name="userId">The ID of the user.</param>
+        /// <returns>An array of the user's inventory entries.</returns>
+        /// <exception cref="GameException">Thrown if inventory not found.</exception>
         public async Task<InventoryEntry[]> GetUserInventoryAsync(int userId)
         {
             var inventory = await _context.InventoryEntries

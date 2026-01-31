@@ -18,6 +18,10 @@ namespace GameServerApi.Services
             _logger = logger;
         }
 
+        /// <summary>
+        /// Retrieves all users with their public information.
+        /// </summary>
+        /// <returns>A list of all users (public data only).</returns>
         public async Task<List<UserPublic>> GetAllUsersAsync()
         {
             return await _context.Users
@@ -25,6 +29,12 @@ namespace GameServerApi.Services
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Retrieves a specific user by their ID.
+        /// </summary>
+        /// <param name="id">The ID of the user to retrieve.</param>
+        /// <returns>The user with their public information.</returns>
+        /// <exception cref="GameException">Thrown if the user is not found.</exception>
         public async Task<UserPublic> GetUserByIdAsync(int id)
         {
             var user = await _context.Users
@@ -38,6 +48,11 @@ namespace GameServerApi.Services
             return user;
         }
 
+        /// <summary>
+        /// Searches for users by username.
+        /// </summary>
+        /// <param name="name">The username or partial username to search for.</param>
+        /// <returns>A collection of users matching the search criteria.</returns>
         public async Task<IEnumerable<UserPublic>> SearchUsersAsync(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
@@ -52,6 +67,10 @@ namespace GameServerApi.Services
             return users.Select(u => new UserPublic(u.Id, u.Username, u.Role));
         }
 
+        /// <summary>
+        /// Retrieves all users with admin role.
+        /// </summary>
+        /// <returns>A collection of all admin users.</returns>
         public async Task<IEnumerable<UserPublic>> GetAllAdminUsersAsync()
         {
             var admins = await _context.Users
@@ -61,6 +80,12 @@ namespace GameServerApi.Services
             return admins.Select(u => new UserPublic(u.Id, u.Username, u.Role));
         }
 
+        /// <summary>
+        /// Registers a new user account with automatic role assignment.
+        /// </summary>
+        /// <param name="newUser">The new user's credentials.</param>
+        /// <returns>A tuple containing the JWT token and the new user's public information.</returns>
+        /// <exception cref="GameException">Thrown if username already exists or registration fails.</exception>
         public async Task<(string Token, UserPublic User)> RegisterAsync(UserPass newUser)
         {
             _logger.LogInformation("User registration attempt: {Username}", newUser.Username);
@@ -97,6 +122,12 @@ namespace GameServerApi.Services
             }
         }
 
+        /// <summary>
+        /// Authenticates a user and generates a JWT token.
+        /// </summary>
+        /// <param name="userPass">The user's login credentials.</param>
+        /// <returns>A tuple containing the JWT token and the user's public information.</returns>
+        /// <exception cref="GameException">Thrown if user not found or password is invalid.</exception>
         public async Task<(string Token, UserPublic User)> LoginAsync(UserPass userPass)
         {
             _logger.LogInformation("User login attempt: {Username}", userPass.Username);
@@ -120,6 +151,13 @@ namespace GameServerApi.Services
             return (token, new UserPublic(user.Id, user.Username, user.Role));
         }
 
+        /// <summary>
+        /// Updates an existing user's information.
+        /// </summary>
+        /// <param name="id">The ID of the user to update.</param>
+        /// <param name="userUpdate">The updated user information.</param>
+        /// <returns>The updated user object.</returns>
+        /// <exception cref="GameException">Thrown if user is not found.</exception>
         public async Task<User> UpdateUserAsync(int id, UserUpdate userUpdate)
         {
             _logger.LogInformation("User update attempt: UserId {UserId}", id);
@@ -151,6 +189,11 @@ namespace GameServerApi.Services
             return user;
         }
 
+        /// <summary>
+        /// Deletes a user account.
+        /// </summary>
+        /// <param name="id">The ID of the user to delete.</param>
+        /// <exception cref="GameException">Thrown if user is not found.</exception>
         public async Task DeleteUserAsync(int id)
         {
             _logger.LogInformation("User deletion attempt: UserId {UserId}", id);

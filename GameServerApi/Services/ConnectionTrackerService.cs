@@ -12,6 +12,11 @@ public class ConnectionTrackerService
     // connectionId -> userId
     private readonly ConcurrentDictionary<string, int> _connectionToUser = new();
 
+    /// <summary>
+    /// Adds a new connection for a user.
+    /// </summary>
+    /// <param name="userId">The ID of the user.</param>
+    /// <param name="connectionId">The connection ID from SignalR.</param>
     public void AddConnection(int userId, string connectionId)
     {
         _userConnections.AddOrUpdate(userId,
@@ -21,6 +26,10 @@ public class ConnectionTrackerService
         _onlinePlayerCount = _userConnections.Count;
     }
 
+    /// <summary>
+    /// Removes a connection for a user.
+    /// </summary>
+    /// <param name="connectionId">The connection ID to remove.</param>
     public void RemoveConnection(string connectionId)
     {
         if (_connectionToUser.TryRemove(connectionId, out int userId))
@@ -40,6 +49,11 @@ public class ConnectionTrackerService
         }
     }
 
+    /// <summary>
+    /// Retrieves all connection IDs for a specific user.
+    /// </summary>
+    /// <param name="userId">The ID of the user.</param>
+    /// <returns>An enumerable of connection IDs.</returns>
     public IEnumerable<string> GetConnections(int userId)
     {
         if (_userConnections.TryGetValue(userId, out var set))
@@ -52,6 +66,11 @@ public class ConnectionTrackerService
         return Enumerable.Empty<string>();
     }
 
+    /// <summary>
+    /// Checks if a user is currently online.
+    /// </summary>
+    /// <param name="userId">The ID of the user.</param>
+    /// <returns>True if the user has active connections, false otherwise.</returns>
     public bool IsOnline(int userId)
     {
         return _userConnections.ContainsKey(userId);

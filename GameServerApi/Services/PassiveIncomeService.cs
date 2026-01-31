@@ -19,7 +19,10 @@ public class PassiveIncomeService
         _connectionTrackerService = connectionTrackerService;
     }
 
-    // Distribute 1 point to all users' score
+    /// <summary>
+    /// Distributes passive income (1 point) to all online users.
+    /// </summary>
+    /// <remarks>Only sends score updates to currently connected users via SignalR.</remarks>
     public async Task DistributePassiveIncomeAsync()
     {
         try
