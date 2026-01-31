@@ -94,13 +94,17 @@ namespace GameServerApi.Services
             
             _logger.LogInformation("Progression reset successfully: UserId {UserId}, NewMultiplier: {Multiplier}", userId, progression.Multiplier);
 
-            // Try to fetch the user's username to include in the system message
+            // Try to fetch the user's username to include in the event
             var user = await _context.Users.FindAsync(userId);
             var username = user?.Username ?? "Unknown";
 
-            // Send a system message to the chat hub if hub context is available
+            // Broadcast PlayerReset event with username and new score to the chat hub if hub context is available
             if (_hubContext != null)
             {
+                // progression.Count is the new score (0)
+                await _hubContext.Clients.All.SendAsync("PlayerReset", username, progression.Count);
+
+                // Also send a legacy system message so older clients that listen to ReceiveMessage still see the reset announcement
                 await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{username} reseted his score of {previousCount} points !");
             }
 
@@ -135,7 +139,21 @@ namespace GameServerApi.Services
                 throw new GameException("No progressions found", "NO_PROGRESSION", 404);
             }
 
-            progression.Count += progression.Multiplier + progression.totalClickValue;
+            // Use a larger intermediate type to avoid integer overflow and clamp the value to int.MaxValue
+            long increment = (long)progression.Multiplier + (long)progression.totalClickValue;
+            long newCountLong = (long)progression.Count + increment;
+            if (newCountLong > int.MaxValue)
+            {
+                progression.Count = int.MaxValue;
+            }
+            else
+            {
+                progression.Count = (int)newCountLong;
+            }
+
+            // Ensure non-negative
+            if (progression.Count < 0) progression.Count = 0;
+
             await _context.SaveChangesAsync();
 
             _logger.LogDebug("Click successful: UserId {UserId}, NewCount: {Count}", userId, progression.Count);

@@ -3,6 +3,8 @@ using System.Text.Json;
 using GameServerApi.Models;
 using GameServerApi.Exceptions;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
+
 
 namespace GameServerApi.Services
 {
@@ -10,11 +12,13 @@ namespace GameServerApi.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<InventoryService> _logger;
+        private readonly IHubContext<ChatHub>? _hubContext;
 
-        public InventoryService(ApplicationDbContext context, ILogger<InventoryService> logger)
+        public InventoryService(ApplicationDbContext context, ILogger<InventoryService> logger, IHubContext<ChatHub>? hubContext = null)
         {
             _context = context;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         public async Task SeedInventoryAsync()
@@ -112,6 +116,13 @@ namespace GameServerApi.Services
                 await transaction.CommitAsync();
                 
                 _logger.LogInformation("Item purchased successfully: UserId {UserId}, ItemId {ItemId}, ItemName: {ItemName}, Quantity: {Quantity}", userId, itemId, item.Name, inventoryEntry.Quantity);
+
+                // If the purchased item is expensive, announce it in the chat
+                if (item.Price > 1000 && _hubContext != null)
+                {
+                    var usernameMsg = user?.Username ?? "Unknown";
+                    await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{usernameMsg} vient d'acquérir {item.Name} !");
+                }
 
                 return inventoryEntry;
             }
