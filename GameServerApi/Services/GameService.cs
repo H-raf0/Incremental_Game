@@ -84,7 +84,7 @@ namespace GameServerApi.Services
             }
 
             progression.Count = 0;
-            progression.totalClickValue = 0;
+            progression.TotalClickValue = 0;
             progression.Multiplier++;
 
             var inventoryEntries = _context.InventoryEntries.Where(i => i.UserId == userId);
@@ -135,7 +135,7 @@ namespace GameServerApi.Services
                 throw new GameException("No progressions found", "NO_PROGRESSION", 404);
             }
 
-            progression.Count += progression.Multiplier + progression.totalClickValue;
+            progression.Count += progression.Multiplier + progression.TotalClickValue;
             await _context.SaveChangesAsync();
 
             _logger.LogDebug("Click successful: UserId {UserId}, NewCount: {Count}", userId, progression.Count);

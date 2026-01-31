@@ -29,7 +29,7 @@ namespace GameServerApi.Tests
             context.Users.Add(user);
             await context.SaveChangesAsync();
 
-            var progression = new Progression(user.Id) { Count = 200, totalClickValue = 0 };
+            var progression = new Progression(user.Id) { Count = 200, TotalClickValue = 0 };
             context.Progressions.Add(progression);
 
             var item = new Item(1, "TestItem", 50, 10, 2);
@@ -45,7 +45,7 @@ namespace GameServerApi.Tests
             var updatedProgression = await context.Progressions.FirstOrDefaultAsync(p => p.UserId == user.Id);
             Assert.NotNull(updatedProgression);
             Assert.Equal(150, updatedProgression!.Count);
-            Assert.Equal(2, updatedProgression!.totalClickValue);
+            Assert.Equal(2, updatedProgression!.TotalClickValue);
         }
 
         [Fact]
@@ -145,7 +145,7 @@ namespace GameServerApi.Tests
             context.Users.Add(user);
             await context.SaveChangesAsync();
 
-            var progression = new Progression(user.Id) { Count = 100, totalClickValue = 0 };
+            var progression = new Progression(user.Id) { Count = 100, TotalClickValue = 0 };
             context.Progressions.Add(progression);
 
             var item = new Item(1, "Cheap", 25, 10, 3);
@@ -162,7 +162,7 @@ namespace GameServerApi.Tests
             var updatedProgression = await context.Progressions.FirstOrDefaultAsync(p => p.UserId == user.Id);
             Assert.NotNull(updatedProgression);
             Assert.Equal(75, updatedProgression!.Count);
-            Assert.Equal(3, updatedProgression!.totalClickValue);
+            Assert.Equal(3, updatedProgression!.TotalClickValue);
 
             var invEntry = await context.InventoryEntries.FirstOrDefaultAsync(e => e.UserId == user.Id && e.ItemId == item.Id);
             Assert.NotNull(invEntry);

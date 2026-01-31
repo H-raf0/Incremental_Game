@@ -99,7 +99,7 @@ namespace GameServerApi.Tests
         {
             var context = CreateContext(Guid.NewGuid().ToString());
             var userId = 20;
-            var progression = new Progression(userId) { Count = 500, BestScore = 100, totalClickValue = 10, Multiplier = 2 };
+            var progression = new Progression(userId) { Count = 500, BestScore = 100, TotalClickValue = 10, Multiplier = 2 };
             context.Progressions.Add(progression);
             context.InventoryEntries.Add(new InventoryEntry(userId, 1, 2));
             await context.SaveChangesAsync();
@@ -110,7 +110,7 @@ namespace GameServerApi.Tests
 
             Assert.Equal(500, result.BestScore);
             Assert.Equal(0, result.Count);
-            Assert.Equal(0, result.totalClickValue);
+            Assert.Equal(0, result.TotalClickValue);
             Assert.Equal(3, result.Multiplier);
 
             var inventoryCount = await context.InventoryEntries.CountAsync(i => i.UserId == userId);

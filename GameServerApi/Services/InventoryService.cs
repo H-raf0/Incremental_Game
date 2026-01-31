@@ -119,7 +119,7 @@ namespace GameServerApi.Services
                 }
 
                 progression.Count -= item.Price;
-                progression.totalClickValue += item.ClickValue;
+                progression.TotalClickValue += item.ClickValue;
 
                 await _context.SaveChangesAsync();
 
