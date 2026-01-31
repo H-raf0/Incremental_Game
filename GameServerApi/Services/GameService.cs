@@ -103,10 +103,11 @@ namespace GameServerApi.Services
             var user = await _context.Users.FindAsync(userId);
             var username = user?.Username ?? "Unknown";
 
-            // Send a system message to the chat hub if hub context is available
+            // Send a PlayerReset event to the chat hub if hub context is available
             if (_hubContext != null)
             {
-                await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{username} reseted his score of {previousCount} points !");
+                // Notify all clients that a player has reset: provide player name and the previous score
+                await _hubContext.Clients.All.SendAsync("PlayerReset", username, previousCount);
             }
 
             return progression;
