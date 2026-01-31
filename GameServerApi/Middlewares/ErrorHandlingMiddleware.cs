@@ -16,6 +16,11 @@ public class ErrorHandlingMiddleware
         _logger = logger;
     }
 
+    /// <summary>
+    /// Handles exceptions and formats error responses.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
+    /// <param name="exception">The exception to handle.</param>
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/json";
@@ -42,6 +47,10 @@ public class ErrorHandlingMiddleware
         }
     }
 
+    /// <summary>
+    /// Invokes the middleware to handle requests and exceptions.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
     public async Task InvokeAsync(HttpContext context)
     {
         try

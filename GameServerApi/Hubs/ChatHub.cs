@@ -19,7 +19,9 @@ public class ChatHub : Hub
 
 
 
-    // User must call Login(userId) after connecting
+    /// <summary>
+    /// Handles client connection to the chat hub.
+    /// </summary>
     public override async Task OnConnectedAsync()
     {
         int count = ConnectionTrackerService.OnlineUserCount;
@@ -28,8 +30,10 @@ public class ChatHub : Hub
         await base.OnConnectedAsync();
     }
 
-
-
+    /// <summary>
+    /// Handles client disconnection from the chat hub.
+    /// </summary>
+    /// <param name="exception">Any exception that caused the disconnection.</param>
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         // Remove this connection from tracker
@@ -47,7 +51,11 @@ public class ChatHub : Hub
 
         await base.OnDisconnectedAsync(exception);
     }
-    // Called by client after connecting: Login(userId)
+
+    /// <summary>
+    /// Logs in a user for the current connection.
+    /// </summary>
+    /// <param name="userId">The ID of the user logging in.</param>
     public async Task Login(int userId)
     {
         _logger.LogInformation("ChatHub.Login called with userId={userId}, connectionId={connectionId}", userId, Context.ConnectionId);
@@ -59,6 +67,11 @@ public class ChatHub : Hub
         await Clients.All.SendAsync("UpdateUserCount", count);
     }
 
+    /// <summary>
+    /// Broadcasts a message to all connected clients.
+    /// </summary>
+    /// <param name="user">The username of the sender.</param>
+    /// <param name="message">The message content.</param>
     public async Task SendMessage(string user, string message)
     {
         await Clients.All.SendAsync("ReceiveMessage", user, message);

@@ -14,6 +14,11 @@ public class JwtService
     {
         _configuration = configuration;
     }
+    /// <summary>
+    /// Generates a JWT token for a user with claims.
+    /// </summary>
+    /// <param name="user">The user to generate a token for.</param>
+    /// <returns>A JWT token string.</returns>
     public string GenerateToken(User user)
     {
         var claims = new[]

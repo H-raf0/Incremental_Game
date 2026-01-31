@@ -14,6 +14,10 @@ public class RequestResponseLoggingMiddleware
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invokes the middleware to log request and response information.
+    /// </summary>
+    /// <param name="context">The HTTP context.</param>
     public async Task InvokeAsync(HttpContext context)
     {
         var sw = Stopwatch.StartNew();

@@ -25,6 +25,11 @@ namespace GameServerApi.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Extracts the user ID from the JWT claims.
+        /// </summary>
+        /// <returns>The user ID from the NameIdentifier claim.</returns>
+        /// <exception cref="GameException">Thrown when the token is invalid or user ID cannot be parsed.</exception>
         private int GetUserId()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -36,7 +41,11 @@ namespace GameServerApi.Controllers
         }
 
 
-        // GET /api/Game/Initialize
+        /// <summary>
+        /// Initializes a new game progression for the current user.
+        /// </summary>
+        /// <returns>The initialized progression object.</returns>
+        /// <remarks>Note: Initialization is also done in UserController when creating a user.</remarks>
         [HttpGet("Initialize")]
         [Authorize]
         public async Task<Progression> InitializeProgression()
@@ -47,7 +56,10 @@ namespace GameServerApi.Controllers
             return progression;
         }
 
-        // GET /api/Game/Progression/
+        /// <summary>
+        /// Retrieves the current game progression for the authenticated user.
+        /// </summary>
+        /// <returns>The progression object containing the user's game state.</returns>
         [HttpGet("Progression")]
         [Authorize]
         public async Task<Progression> GetProgression()
@@ -58,7 +70,10 @@ namespace GameServerApi.Controllers
             return progression;
         }
 
-        // POST /api/Game/Reset
+        /// <summary>
+        /// Resets the game progression for the current user.
+        /// </summary>
+        /// <returns>The reset progression object.</returns>
         [HttpPost("Reset")]
         [Authorize]
         public async Task<Progression> ResetProgression()
@@ -71,7 +86,10 @@ namespace GameServerApi.Controllers
 
 
 
-        // GET /api/Game/ResetCost
+        /// <summary>
+        /// Retrieves the cost required to reset the user's game progression.
+        /// </summary>
+        /// <returns>A response containing the reset cost information.</returns>
         [HttpGet("ResetCost")]
         [Authorize]
         public async Task<ResetCostResponse> ResetCost()
@@ -84,7 +102,11 @@ namespace GameServerApi.Controllers
 
 
 
-        // GET /api/Game/Click
+        /// <summary>
+        /// Processes a click action for the current user.
+        /// </summary>
+        /// <returns>A response containing the results of the click action.</returns>
+        /// <remarks>This endpoint is rate limited per user to prevent abuse.</remarks>
         [HttpGet("Click")]
         [Authorize]
         [EnableRateLimiting("perUser")]
@@ -96,7 +118,10 @@ namespace GameServerApi.Controllers
             return response;
         }
 
-        // GET /api/Game/BestScore
+        /// <summary>
+        /// Retrieves the best score among all players.
+        /// </summary>
+        /// <returns>A response containing the best score information.</returns>
         [HttpGet("BestScore")]
         [Authorize]
         public async Task<BestScoreResponse> GetBestScore()
