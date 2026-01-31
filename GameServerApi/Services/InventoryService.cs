@@ -78,6 +78,20 @@ namespace GameServerApi.Services
             return items;
         }
 
+        // Get item by id
+        public async Task<Item> GetItemByIdAsync(int itemId)
+        {
+            var item = await _context.Items.FindAsync(itemId) ?? throw new GameException("Item not found", "ITEM_NOT_FOUND", 404);
+            return item;
+        }
+
+        // Get username for a user id
+        public async Task<string> GetUsernameAsync(int userId)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            return user?.Username ?? "Unknown";
+        }
+
         public async Task<InventoryEntry> BuyItemAsync(int userId, int itemId)
         {
             _logger.LogInformation("Item purchase attempt: UserId {UserId}, ItemId {ItemId}", userId, itemId);

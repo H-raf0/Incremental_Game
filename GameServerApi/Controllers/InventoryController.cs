@@ -6,10 +6,12 @@ using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 
 
 using GameServerApi.Models;
 using GameServerApi.Exceptions;
+using GameServerApi;
 
 namespace GameServerApi.Controllers
 {
@@ -20,11 +22,13 @@ namespace GameServerApi.Controllers
     {
         private readonly GameServerApi.Services.InventoryService _inventoryService;
         private readonly ILogger<InventoryController> _logger;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public InventoryController(GameServerApi.Services.InventoryService inventoryService, ILogger<InventoryController> logger)
+        public InventoryController(GameServerApi.Services.InventoryService inventoryService, ILogger<InventoryController> logger, IHubContext<ChatHub> hubContext)
         {
             _inventoryService = inventoryService;
             _logger = logger;
+            _hubContext = hubContext;
         }
 
         private int GetUserId()
@@ -67,6 +71,15 @@ namespace GameServerApi.Controllers
             _logger.LogInformation("User {UserId} attempts to buy item {ItemId}", userId, itemId);
             var entry = await _inventoryService.BuyItemAsync(userId, itemId);
             _logger.LogInformation("User {UserId} bought item {ItemId} (EntryId: {EntryId})", userId, itemId, entry.Id);
+
+            // Fetch item to check price
+            var item = await _inventoryService.GetItemByIdAsync(itemId);
+            if (item.Price > 10000)
+            {
+                var username = await _inventoryService.GetUsernameAsync(userId);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{username} vient d'acquérir {item.Name} !");
+            }
+
             return entry;
         }
 
