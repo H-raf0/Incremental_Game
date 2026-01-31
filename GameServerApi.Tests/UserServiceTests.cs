@@ -39,7 +39,7 @@ namespace GameServerApi.Tests
 
             var userPass = new UserPass("TestUser", "Password123!");
 
-            var (token, userPublic) = await service.RegisterUserAsync(userPass);
+            var (token, userPublic) = await service.RegisterAsync(userPass);
 
             Assert.False(string.IsNullOrEmpty(token));
             Assert.Equal("TestUser", userPublic.Username);
@@ -66,7 +66,7 @@ namespace GameServerApi.Tests
 
             await Assert.ThrowsAsync<GameException>(async () =>
             {
-                await service.RegisterUserAsync(new UserPass("Existing", "pwd2"));
+                await service.RegisterAsync(new UserPass("Existing", "pwd2"));
             });
         }
 
