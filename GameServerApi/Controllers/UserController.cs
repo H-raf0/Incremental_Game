@@ -19,11 +19,13 @@ namespace GameServerApi.Controllers
     {
         private readonly GameServerApi.Services.UserService _userService;
         private readonly ILogger<UserController> _logger;
+        private readonly GameServerApi.Services.ConnectionTrackerService _connectionTrackerService;
 
-        public UserController(GameServerApi.Services.UserService userService, ILogger<UserController> logger)
+        public UserController(GameServerApi.Services.UserService userService, ILogger<UserController> logger, GameServerApi.Services.ConnectionTrackerService connectionTrackerService)
         {
             _userService = userService;
             _logger = logger;
+            _connectionTrackerService = connectionTrackerService;
         }
 
         // GET: api/<UserController>/All
@@ -84,12 +86,33 @@ namespace GameServerApi.Controllers
         [HttpPost("Login")]
         [AllowAnonymous]
         [EnableRateLimiting("fixed")]
+
         public async Task<object> Login([FromBody] UserPass userPass)
         {
             _logger.LogInformation("Login attempt for username {Username}", userPass.Username);
             var (Token, User) = await _userService.LoginAsync(userPass);
             _logger.LogInformation("User logged in {Username} (Id: {UserId})", User.Username, User.Id);
+            // Online tracking is now handled in ChatHub via SignalR connection
             return new { token = Token, user = User };
+        }
+
+        // POST api/<UserController>/Logout
+        [HttpPost("Logout")]
+        [Authorize]
+        public IActionResult Logout()
+        {
+            // Get user id from claims
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(userIdClaim, out int userId))
+            {
+                _logger.LogInformation("User logged out (Id: {UserId})", userId);
+                return Ok(new { message = "Logged out successfully" });
+            }
+            else
+            {
+                _logger.LogWarning("Logout failed: UserId claim missing or invalid");
+                return BadRequest(new { error = "Invalid user id" });
+            }
         }
 
 

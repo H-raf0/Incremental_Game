@@ -300,4 +300,6 @@ GameServerApi.Tests/bin/
 # User-specific files (MonoDevelop/Xamarin Studio)
 
 *.db
+*.db-shm
+*.db-wal
 *.asc

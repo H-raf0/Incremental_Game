@@ -40,7 +40,7 @@ public class PassiveIncomeService
 
             await _context.SaveChangesAsync();
 
-            // Send ScoreUpdate event to each connected player
+            // Send ScoreUpdate event to each connected player (only to the concerned user)
             if (_hubContext == null)
             {
                 _logger.LogWarning("PassiveIncomeService: IHubContext<ChatHub> not available, skipping ScoreUpdate sends");
@@ -49,17 +49,32 @@ public class PassiveIncomeService
             {
                 foreach (var progression in progressions)
                 {
-                    if (_connectionTrackerService.IsOnline(progression.UserId))
+                    var userId = progression.UserId;
+                    bool isOnline = _connectionTrackerService.IsOnline(userId);
+                    _logger.LogInformation("PassiveIncomeService: User {userId} online status: {isOnline}", userId, isOnline);
+                    if (isOnline)
                     {
-                        try
+                        var connections = _connectionTrackerService.GetConnections(userId);
+                        if (!connections.Any())
                         {
-                            var userId = progression.UserId.ToString();
-                            await _hubContext.Clients.User(userId).SendAsync("ScoreUpdate", progression.Count);
+                            _logger.LogWarning("PassiveIncomeService: User {userId} is marked online but has no active connections", userId);
                         }
-                        catch (Exception ex)
+                        foreach (var connectionId in connections)
                         {
-                            _logger.LogError(ex, "Error sending ScoreUpdate to user {userId}", progression.UserId);
+                            try
+                            {
+                                await _hubContext.Clients.Client(connectionId).SendAsync("ScoreUpdate", progression.Count);
+                                _logger.LogInformation("PassiveIncomeService: Sent ScoreUpdate to user {userId} (connection {connectionId}) with count {count}", userId, connectionId, progression.Count);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Error sending ScoreUpdate to user {userId} (connection {connectionId})", userId, connectionId);
+                            }
                         }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("PassiveIncomeService: User {userId} is offline, not sending ScoreUpdate", userId);
                     }
                 }
             }
