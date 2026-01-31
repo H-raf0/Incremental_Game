@@ -81,7 +81,6 @@ work together to increase player progression.
 
 A video demonstration of the Incremental Game can be found at the following link:
 
-[Demo Video ](https://www.example.com/demo-video)  
 
 ---
 
