@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace GameServerApi;
 
@@ -10,6 +11,16 @@ public class ChatHub : Hub
     public override async Task OnConnectedAsync()
     {
         _onlinePlayerCount++;
+        
+        // Get the user ID from the JWT token claims
+        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        // Send Login event with the user's ID
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await Clients.All.SendAsync("Login", userId);
+        }
+        
         await Clients.All.SendAsync("UpdateUserCount", _onlinePlayerCount);
         await base.OnConnectedAsync();
     }
