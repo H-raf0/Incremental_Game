@@ -12,6 +12,11 @@ namespace GameServerApi.Services
         private readonly ILogger<GameService> _logger;
         private readonly IHubContext<ChatHub>? _hubContext;
 
+        // Cache du high score
+        private static long _cachedHighScore = 0;
+        private static int _cachedHighScoreUserId = 0;
+        private static string _cachedHighScoreUsername = "";
+
         public GameService(ApplicationDbContext context, ILogger<GameService> logger, IHubContext<ChatHub>? hubContext = null)
         {
             _context = context;
@@ -137,6 +142,25 @@ namespace GameServerApi.Services
 
             progression.Count += progression.Multiplier + progression.TotalClickValue;
             await _context.SaveChangesAsync();
+
+            // Vérifier si c'est un nouveau record d'un AUTRE utilisateur (pas de spam du même user)
+            if (progression.Count > _cachedHighScore && userId != _cachedHighScoreUserId)
+            {
+                _cachedHighScore = progression.Count;
+                _cachedHighScoreUserId = userId;
+
+                // Récupérer le username
+                var user = await _context.Users.FindAsync(userId);
+                _cachedHighScoreUsername = user?.Username ?? "Unknown";
+
+                _logger.LogInformation("New High Score! UserId {UserId}, Username: {Username}, Score: {Score}", userId, _cachedHighScoreUsername, _cachedHighScore);
+
+                // Envoyer la notification à tous les clients
+                if (_hubContext != null)
+                {
+                    await _hubContext.Clients.All.SendAsync("NewHighScore", _cachedHighScoreUsername, _cachedHighScore);
+                }
+            }
 
             _logger.LogDebug("Click successful: UserId {UserId}, NewCount: {Count}", userId, progression.Count);
             return new ClickResponse(progression.Count, progression.Multiplier);
