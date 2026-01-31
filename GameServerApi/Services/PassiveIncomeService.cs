@@ -9,12 +9,14 @@ public class PassiveIncomeService
     private readonly ApplicationDbContext _context;
     private readonly ILogger<PassiveIncomeService> _logger;
     private readonly IHubContext<ChatHub>? _hubContext;
+    private readonly ConnectionTrackerService _connectionTrackerService;
 
-    public PassiveIncomeService(ApplicationDbContext context, ILogger<PassiveIncomeService> logger, IHubContext<ChatHub>? hubContext = null)
+    public PassiveIncomeService(ApplicationDbContext context, ILogger<PassiveIncomeService> logger, ConnectionTrackerService connectionTrackerService, IHubContext<ChatHub>? hubContext = null)
     {
         _context = context;
         _logger = logger;
         _hubContext = hubContext;
+        _connectionTrackerService = connectionTrackerService;
     }
 
     // Distribute 1 point to all users' score
@@ -39,12 +41,26 @@ public class PassiveIncomeService
             await _context.SaveChangesAsync();
 
             // Send ScoreUpdate event to each connected player
-            if (_hubContext != null)
+            if (_hubContext == null)
+            {
+                _logger.LogWarning("PassiveIncomeService: IHubContext<ChatHub> not available, skipping ScoreUpdate sends");
+            }
+            else
             {
                 foreach (var progression in progressions)
                 {
-                    // Send score update only to the specific player via their user ID
-                    await _hubContext.Clients.User(progression.UserId.ToString()).SendAsync("ScoreUpdate", progression.Count);
+                    if (_connectionTrackerService.IsOnline(progression.UserId))
+                    {
+                        try
+                        {
+                            var userId = progression.UserId.ToString();
+                            await _hubContext.Clients.User(userId).SendAsync("ScoreUpdate", progression.Count);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Error sending ScoreUpdate to user {userId}", progression.UserId);
+                        }
+                    }
                 }
             }
 

@@ -89,6 +89,7 @@ public class Program
         builder.Services.AddScoped<GameService>();
         builder.Services.AddScoped<InventoryService>();
         builder.Services.AddScoped<PassiveIncomeService>();
+        builder.Services.AddSingleton<ConnectionTrackerService>();
 
         // Register the background service for passive income
         builder.Services.AddHostedService<MyWorker>();
