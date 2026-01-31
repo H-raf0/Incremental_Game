@@ -141,9 +141,16 @@ namespace GameServerApi.Services
                 throw new GameException("No progressions found", "NO_PROGRESSION", 404);
             }
 
-            // Calculate the new count and cap it to prevent overflow
+            // Calculate the new count, prevent overflow, and ensure it never becomes negative
             long newCount = (long)progression.Count + progression.Multiplier + progression.TotalClickValue;
-            progression.Count = newCount > int.MaxValue ? int.MaxValue : (int)newCount;
+            if (newCount > int.MaxValue)
+            {
+                progression.Count = int.MaxValue;
+            }
+            else
+            {
+                progression.Count = (int)Math.Max(0, newCount);
+            }
             await _context.SaveChangesAsync();
 
             // Vérifier si c'est un nouveau record d'un AUTRE utilisateur (pas de spam du même user)
