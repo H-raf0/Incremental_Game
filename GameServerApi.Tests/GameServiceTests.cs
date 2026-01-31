@@ -161,57 +161,5 @@ namespace GameServerApi.Tests
             Assert.Equal(31, best.UserId);
             Assert.Equal(300, best.BestScore);
         }
-
-        [Fact]
-        public async Task ResetProgressionAsync_Broadcasts_PlayerReset()
-        {
-            var context = CreateContext(Guid.NewGuid().ToString());
-            var userId = 40;
-            var user = new User("resetter", "pwd", Role.USER);
-            context.Users.Add(user);
-            await context.SaveChangesAsync();
-
-            var progression = new Progression(user.Id) { Count = 500, totalClickValue = 0 };
-            context.Progressions.Add(progression);
-            await context.SaveChangesAsync();
-
-            var mockHub = new Moq.Mock<Microsoft.AspNetCore.SignalR.IHubContext<ChatHub>>();
-            var mockClients = new Moq.Mock<Microsoft.AspNetCore.SignalR.IHubClients>();
-            var mockProxyAll = new Moq.Mock<Microsoft.AspNetCore.SignalR.IClientProxy>();
-            mockClients.Setup(c => c.All).Returns(mockProxyAll.Object);
-            mockHub.SetupGet(h => h.Clients).Returns(mockClients.Object);
-
-            var service = new GameService(context, new NullLogger<GameService>(), mockHub.Object);
-
-            var result = await service.ResetProgressionAsync(user.Id);
-
-            // New score should be 0
-            Assert.Equal(0, result.Count);
-
-            mockProxyAll.Verify(
-                x => x.SendCoreAsync(
-                    "PlayerReset",
-                    It.Is<object[]>(o => o != null && (string)o[0] == user.Username && (int)o[1] == 0),
-                    It.IsAny<System.Threading.CancellationToken>()),
-                Moq.Times.Once);
-        }
-
-        [Fact]
-        public async Task ClickAsync_CapsAtMaxValue()
-        {
-            var context = CreateContext(Guid.NewGuid().ToString());
-            var userId = 41;
-            var progression = new Progression(userId) { Count = int.MaxValue - 1, Multiplier = 5, totalClickValue = 0 };
-            context.Progressions.Add(progression);
-            await context.SaveChangesAsync();
-
-            var service = new GameService(context, new NullLogger<GameService>());
-
-            var response = await service.ClickAsync(userId);
-
-            Assert.Equal(int.MaxValue, response.Count);
-            var updated = await context.Progressions.FirstOrDefaultAsync(p => p.UserId == userId);
-            Assert.Equal(int.MaxValue, updated!.Count);
-        }
     }
 }

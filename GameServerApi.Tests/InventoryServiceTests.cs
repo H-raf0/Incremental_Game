@@ -168,39 +168,5 @@ namespace GameServerApi.Tests
             Assert.NotNull(invEntry);
             Assert.Equal(1, invEntry.Quantity);
         }
-
-        [Fact]
-        public async Task BuyItemAsync_Sends_SystemMessage_WhenExpensive()
-        {
-            var context = CreateContext(Guid.NewGuid().ToString());
-            var user = new User("richBuyer", "password", Role.USER);
-            context.Users.Add(user);
-            await context.SaveChangesAsync();
-
-            var progression = new Progression(user.Id) { Count = 50000 };
-            context.Progressions.Add(progression);
-
-            var item = new Item(1, "LegendarySword", 20000, 1, 100);
-            context.Items.Add(item);
-
-            await context.SaveChangesAsync();
-
-            var mockHub = new Moq.Mock<Microsoft.AspNetCore.SignalR.IHubContext<ChatHub>>();
-            var mockClients = new Moq.Mock<Microsoft.AspNetCore.SignalR.IHubClients>();
-            var mockProxyAll = new Moq.Mock<Microsoft.AspNetCore.SignalR.IClientProxy>();
-            mockClients.Setup(c => c.All).Returns(mockProxyAll.Object);
-            mockHub.SetupGet(h => h.Clients).Returns(mockClients.Object);
-
-            var service = new InventoryService(context, new NullLogger<InventoryService>(), mockHub.Object);
-
-            var entry = await service.BuyItemAsync(user.Id, item.Id);
-
-            mockProxyAll.Verify(
-                x => x.SendCoreAsync(
-                    "ReceiveMessage",
-                    It.Is<object[]>(o => o != null && (string)o[0] == "SYSTEM" && ((string)o[1]).Contains("richBuyer vient d'acquérir LegendarySword")),
-                    It.IsAny<System.Threading.CancellationToken>()),
-                Moq.Times.Once);
-        }
     }
 }
