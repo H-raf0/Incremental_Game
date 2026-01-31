@@ -31,7 +31,6 @@ namespace GameServerApi.Services
             {
                 throw new GameException("Progression already exists", "PROGRESSION_EXISTS", 400);
             }
-
             try
             {
                 var progression = new Progression(userId);
@@ -45,7 +44,6 @@ namespace GameServerApi.Services
                 throw new GameException("Failed to initialize", "INITIALIZATION_FAILED", 500);
             }
         }
-
         public async Task<Progression> GetProgressionAsync(int userId)
         {
             var progression = await _context.Progressions
@@ -96,14 +94,9 @@ namespace GameServerApi.Services
             _context.InventoryEntries.RemoveRange(inventoryEntries);
 
             await _context.SaveChangesAsync();
-            
             _logger.LogInformation("Progression reset successfully: UserId {UserId}, NewMultiplier: {Multiplier}", userId, progression.Multiplier);
-
-            // Try to fetch the user's username to include in the system message
             var user = await _context.Users.FindAsync(userId);
             var username = user?.Username ?? "Unknown";
-
-            // Send a PlayerReset event to the chat hub if hub context is available
             if (_hubContext != null)
             {
                 // Notify all clients that a player has reset: provide player name and the previous score
@@ -162,7 +155,6 @@ namespace GameServerApi.Services
                 // Récupérer le username
                 var user = await _context.Users.FindAsync(userId);
                 _cachedHighScoreUsername = user?.Username ?? "Unknown";
-
                 _logger.LogInformation("New High Score! UserId {UserId}, Username: {Username}, Score: {Score}", userId, _cachedHighScoreUsername, _cachedHighScore);
 
                 // Envoyer la notification à tous les clients

@@ -194,6 +194,21 @@ namespace GameServerApi.Tests
         }
 
         [Fact]
+        public async Task GetUsernameAsync_ReturnsUsername_WhenUserExists()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var user = new User("known", "pwd", Role.USER);
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            var username = await service.GetUsernameAsync(user.Id);
+
+            Assert.Equal("known", username);
+        }
+
+        [Fact]
         public async Task GetUserInventoryAsync_ReturnsUserItems()
         {
             var context = CreateContext(Guid.NewGuid().ToString());
@@ -244,6 +259,85 @@ namespace GameServerApi.Tests
                 var items = await context.Items.ToListAsync();
                 Assert.Single(items);
                 Assert.Equal("A", items[0].Name);
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDir);
+                if (File.Exists(baseItemsBackup))
+                {
+                    File.Move(baseItemsBackup, baseItemsPath);
+                }
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task SeedInventoryAsync_Throws_WhenInvalidJson()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            var originalDir = Directory.GetCurrentDirectory();
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            var baseDir = AppContext.BaseDirectory;
+            var baseItemsPath = Path.Combine(baseDir, "items.json");
+            var baseItemsBackup = Path.Combine(baseDir, "items.json.bak");
+            try
+            {
+                if (File.Exists(baseItemsPath))
+                {
+                    File.Move(baseItemsPath, baseItemsBackup);
+                }
+
+                Directory.SetCurrentDirectory(tempDir);
+                await File.WriteAllTextAsync(Path.Combine(tempDir, "items.json"), "{not-valid-json");
+
+                await Assert.ThrowsAsync<GameException>(async () =>
+                {
+                    await service.SeedInventoryAsync();
+                });
+            }
+            finally
+            {
+                Directory.SetCurrentDirectory(originalDir);
+                if (File.Exists(baseItemsBackup))
+                {
+                    File.Move(baseItemsBackup, baseItemsPath);
+                }
+                Directory.Delete(tempDir, true);
+            }
+        }
+
+        [Fact]
+        public async Task SeedInventoryAsync_Throws_WhenNoValidItems()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var service = new InventoryService(context, new NullLogger<InventoryService>());
+
+            var originalDir = Directory.GetCurrentDirectory();
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tempDir);
+            var baseDir = AppContext.BaseDirectory;
+            var baseItemsPath = Path.Combine(baseDir, "items.json");
+            var baseItemsBackup = Path.Combine(baseDir, "items.json.bak");
+            try
+            {
+                if (File.Exists(baseItemsPath))
+                {
+                    File.Move(baseItemsPath, baseItemsBackup);
+                }
+
+                Directory.SetCurrentDirectory(tempDir);
+                await File.WriteAllTextAsync(
+                    Path.Combine(tempDir, "items.json"),
+                    "[{\"id\":1,\"name\":\" \",\"price\":10,\"maxQuantity\":2,\"clickValue\":1}]"
+                );
+
+                await Assert.ThrowsAsync<GameException>(async () =>
+                {
+                    await service.SeedInventoryAsync();
+                });
             }
             finally
             {

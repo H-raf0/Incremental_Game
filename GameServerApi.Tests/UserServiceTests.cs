@@ -113,6 +113,19 @@ namespace GameServerApi.Tests
         }
 
         [Fact]
+        public async Task Login_ShouldThrow_WhenUserNotFound()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.LoginAsync(new UserPass("missing", "pwd"));
+            });
+        }
+
+        [Fact]
         public async Task GetAllUsersAsync_ReturnsPublicUsers()
         {
             var context = CreateContext(Guid.NewGuid().ToString());
@@ -126,6 +139,22 @@ namespace GameServerApi.Tests
             var users = await service.GetAllUsersAsync();
 
             Assert.Equal(2, users.Count);
+        }
+
+        [Fact]
+        public async Task GetUserByIdAsync_ReturnsUser_WhenExists()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var user = new User("lookup", "pwd", Role.USER);
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            var found = await service.GetUserByIdAsync(user.Id);
+
+            Assert.Equal("lookup", found.Username);
         }
 
         [Fact]
@@ -188,6 +217,21 @@ namespace GameServerApi.Tests
         }
 
         [Fact]
+        public async Task RegisterUser_AssignsUserRole_WhenAdminExists()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            context.Users.Add(new User("admin", "pwd", Role.ADMIN));
+            await context.SaveChangesAsync();
+
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            var (_, userPublic) = await service.RegisterAsync(new UserPass("regular", "pwd"));
+
+            Assert.Equal(Role.USER, userPublic.Role);
+        }
+
+        [Fact]
         public async Task UpdateUserAsync_UpdatesFields()
         {
             var context = CreateContext(Guid.NewGuid().ToString());
@@ -207,6 +251,19 @@ namespace GameServerApi.Tests
         }
 
         [Fact]
+        public async Task UpdateUserAsync_Throws_WhenMissing()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.UpdateUserAsync(404, new UserUpdate("x", "y", Role.USER));
+            });
+        }
+
+        [Fact]
         public async Task DeleteUserAsync_RemovesUser()
         {
             var context = CreateContext(Guid.NewGuid().ToString());
@@ -221,6 +278,19 @@ namespace GameServerApi.Tests
 
             var removed = await context.Users.FindAsync(user.Id);
             Assert.Null(removed);
+        }
+
+        [Fact]
+        public async Task DeleteUserAsync_Throws_WhenMissing()
+        {
+            var context = CreateContext(Guid.NewGuid().ToString());
+            var jwtService = new JwtService(new Mock<IConfiguration>().Object);
+            var service = new UserService(context, jwtService, new NullLogger<UserService>());
+
+            await Assert.ThrowsAsync<GameException>(async () =>
+            {
+                await service.DeleteUserAsync(999);
+            });
         }
     }
 }
