@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.IO;
 using System.Text.Json;
 using GameServerApi.Models;
 using GameServerApi.Exceptions;
@@ -26,8 +28,20 @@ namespace GameServerApi.Services
                 _context.Items.RemoveRange(_context.Items);
                 _context.InventoryEntries.RemoveRange(_context.InventoryEntries);
 
-                var client = new HttpClient();
-                string json = await client.GetStringAsync("https://csharp.nouvet.fr/front4/items.json");
+                // Try to load items.json from the application's base directory first,
+                // then fall back to the current working directory.
+                string filePath = Path.Combine(AppContext.BaseDirectory, "items.json");
+                if (!File.Exists(filePath))
+                {
+                    filePath = Path.Combine(Directory.GetCurrentDirectory(), "items.json");
+                }
+
+                if (!File.Exists(filePath))
+                {
+                    throw new GameException($"seed failed: items.json not found at '{filePath}'", "SEED_FAILED", 500);
+                }
+
+                string json = await File.ReadAllTextAsync(filePath);
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var items = JsonSerializer.Deserialize<List<Item>>(json, options) ?? throw new GameException("seed failed: items deserialization returned null", "SEED_FAILED", 500);
