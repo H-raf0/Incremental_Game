@@ -12,6 +12,11 @@ namespace GameServerApi.Services
         private readonly ILogger<GameService> _logger;
         private readonly IHubContext<ChatHub>? _hubContext;
 
+        // Cache du high score
+        private static long _cachedHighScore = 0;
+        private static int _cachedHighScoreUserId = 0;
+        private static string _cachedHighScoreUsername = "";
+
         public GameService(ApplicationDbContext context, ILogger<GameService> logger, IHubContext<ChatHub>? hubContext = null)
         {
             _context = context;
@@ -84,7 +89,7 @@ namespace GameServerApi.Services
             }
 
             progression.Count = 0;
-            progression.totalClickValue = 0;
+            progression.TotalClickValue = 0;
             progression.Multiplier++;
 
             var inventoryEntries = _context.InventoryEntries.Where(i => i.UserId == userId);
@@ -94,18 +99,15 @@ namespace GameServerApi.Services
             
             _logger.LogInformation("Progression reset successfully: UserId {UserId}, NewMultiplier: {Multiplier}", userId, progression.Multiplier);
 
-            // Try to fetch the user's username to include in the event
+            // Try to fetch the user's username to include in the system message
             var user = await _context.Users.FindAsync(userId);
             var username = user?.Username ?? "Unknown";
 
-            // Broadcast PlayerReset event with username and new score to the chat hub if hub context is available
+            // Send a PlayerReset event to the chat hub if hub context is available
             if (_hubContext != null)
             {
-                // progression.Count is the new score (0)
-                await _hubContext.Clients.All.SendAsync("PlayerReset", username, progression.Count);
-
-                // Also send a legacy system message so older clients that listen to ReceiveMessage still see the reset announcement
-                await _hubContext.Clients.All.SendAsync("ReceiveMessage", "SYSTEM", $"{username} reseted his score of {previousCount} points !");
+                // Notify all clients that a player has reset: provide player name and the previous score
+                await _hubContext.Clients.All.SendAsync("PlayerReset", username, previousCount);
             }
 
             return progression;
@@ -139,22 +141,29 @@ namespace GameServerApi.Services
                 throw new GameException("No progressions found", "NO_PROGRESSION", 404);
             }
 
-            // Use a larger intermediate type to avoid integer overflow and clamp the value to int.MaxValue
-            long increment = (long)progression.Multiplier + (long)progression.totalClickValue;
-            long newCountLong = (long)progression.Count + increment;
-            if (newCountLong > int.MaxValue)
-            {
-                progression.Count = int.MaxValue;
-            }
-            else
-            {
-                progression.Count = (int)newCountLong;
-            }
-
-            // Ensure non-negative
-            if (progression.Count < 0) progression.Count = 0;
-
+            // Calculate the new count and cap it to prevent overflow
+            long newCount = (long)progression.Count + progression.Multiplier + progression.TotalClickValue;
+            progression.Count = newCount > int.MaxValue ? int.MaxValue : (int)newCount;
             await _context.SaveChangesAsync();
+
+            // Vérifier si c'est un nouveau record d'un AUTRE utilisateur (pas de spam du même user)
+            if (progression.Count > _cachedHighScore && userId != _cachedHighScoreUserId)
+            {
+                _cachedHighScore = progression.Count;
+                _cachedHighScoreUserId = userId;
+
+                // Récupérer le username
+                var user = await _context.Users.FindAsync(userId);
+                _cachedHighScoreUsername = user?.Username ?? "Unknown";
+
+                _logger.LogInformation("New High Score! UserId {UserId}, Username: {Username}, Score: {Score}", userId, _cachedHighScoreUsername, _cachedHighScore);
+
+                // Envoyer la notification à tous les clients
+                if (_hubContext != null)
+                {
+                    await _hubContext.Clients.All.SendAsync("NewHighScore", _cachedHighScoreUsername, _cachedHighScore);
+                }
+            }
 
             _logger.LogDebug("Click successful: UserId {UserId}, NewCount: {Count}", userId, progression.Count);
             return new ClickResponse(progression.Count, progression.Multiplier);

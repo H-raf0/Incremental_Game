@@ -131,7 +131,7 @@ public class Program
             // Définition d'une politique nommée "fixed"
             options.AddFixedWindowLimiter("fixed", limiterOptions =>
             {
-                limiterOptions.PermitLimit = 100; // Max requêtes par l'ensemble des utilisateurs
+                limiterOptions.PermitLimit = 10000; // Max requêtes par l'ensemble des utilisateurs
                 limiterOptions.Window = TimeSpan.FromSeconds(10); // Toutes les 10 secondes
                 limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
                 limiterOptions.QueueLimit = 0; // Pas de file d'attente
