@@ -1,6 +1,82 @@
-@GameServerApi_HostAddress = http://localhost:5203
+@baseUrl = http://localhost:5000
+@token = REPLACE_WITH_JWT
 
-GET {{GameServerApi_HostAddress}}/weatherforecast/
+### Register
+POST {{baseUrl}}/api/User/Register
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "secret123"
+}
+
+### Login
+POST {{baseUrl}}/api/User/Login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "secret123"
+}
+
+### Get all users (public)
+GET {{baseUrl}}/api/User/All
 Accept: application/json
 
-###
+### Get user by id (auth)
+GET {{baseUrl}}/api/User/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Search users (auth)
+GET {{baseUrl}}/api/User/Search/al
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Initialize progression (auth)
+GET {{baseUrl}}/api/Game/Initialize
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Get progression (auth)
+GET {{baseUrl}}/api/Game/Progression
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Click (auth, rate limited)
+GET {{baseUrl}}/api/Game/Click
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Reset cost (auth)
+GET {{baseUrl}}/api/Game/ResetCost
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Reset (auth)
+POST {{baseUrl}}/api/Game/Reset
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Best score (auth)
+GET {{baseUrl}}/api/Game/BestScore
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Seed items (public)
+GET {{baseUrl}}/api/Inventory/Seed
+Accept: application/json
+
+### List items (public)
+GET {{baseUrl}}/api/Inventory/Items
+Accept: application/json
+
+### Buy item (auth, rate limited)
+POST {{baseUrl}}/api/Inventory/Buy/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### User inventory (auth)
+GET {{baseUrl}}/api/Inventory/UserInventory
+Authorization: Bearer {{token}}
+Accept: application/json

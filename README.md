@@ -1,154 +1,112 @@
 # Incremental Game
 
-## 1. Project Overview
+Backend d'un jeu incremental en ASP.NET Core. Les joueurs progressent via des clics, des upgrades, des achievements et des resets, avec un etat persistant cote serveur.
 
-**Incremental Game** is a backend driven incremental game project developed with **ASP.NET Core**.  
-Players generate progression through clicks, unlock upgrades, earn achievements, and reset their progression to gain long term advantages.
+## Table des matieres
+- [Apercu](#apercu)
+- [Architecture](#architecture)
+- [Demarrage rapide](#demarrage-rapide)
+- [Configuration](#configuration)
+- [Authentification](#authentification)
+- [Documentation API et SignalR](#documentation-api-et-signalr)
+- [Gameplay et progression](#gameplay-et-progression)
+- [Base de donnees](#base-de-donnees)
+- [Tests](#tests)
+- [Architecture (schema)](#architecture-schema)
+- [Structure du projet](#structure-du-projet)
+- [Video demo](#video-demo)
+- [Contributeurs](#contributeurs)
 
-The project focuses on **game state management**, **incremental mechanics**, and **clean backend architecture**.
+## Apercu
+Le projet met l'accent sur la gestion d'etat, les mecaniques incrementales et une architecture backend claire.
 
-### Purpose & Main Features
-- Incremental progression based on user actions.
-- Upgrade and multiplier system to accelerate progress.
-- Achievement tracking based on player milestones.
-- Persistent game state stored on the server.
-- REST API designed to be consumed by a frontend client.
+Fonctionnalites principales :
+- Progression par clic avec rate limiting.
+- Revenu passif periodique.
+- Systemes d'upgrades et multiplicateurs.
+- Achievements bases sur des paliers.
+- Persistance serveur.
+- API REST consommee par un client frontend.
 
-### Target Audience / Use Case
-- Students learning ASP.NET Core and Web API architecture.
-- Developers interested in incremental game mechanics.
-- Educational project demonstrating clean backend design.
+## Architecture
+Architecture modulaire avec responsabilites claires :
+- **UI (Frontend externe)** : clics, resets, achats.
+- **Game Logic** : boucle de jeu et regles de progression.
+- **Resource/Inventory** : gestion des objets et bonus.
+- **Achievement System** : suivi des paliers.
+- **Persistence** : sauvegarde et restauration.
+- **SignalR** : chat et evenements temps reel.
 
----
+## Demarrage rapide
+Prerequis :
+- .NET SDK 7.0+
 
-## 2. Project Architecture
+Build :
+```bash
+dotnet restore
+dotnet build
+```
 
-The application follows a **layered and modular architecture**, where each module has a clear responsibility.
+Run :
+```bash
+dotnet run --project GameServerApi
+```
 
-### Main Components
+Ensuite : `http://localhost:5000`
 
-- **UI Layer (External Frontend):**
-  External client responsible for user interactions such as clicks, resets, and upgrade purchases.
+## Configuration
+Details complets dans `docs/Configuration.md`.
 
-- **Game Logic:**  
-  Central orchestration layer that manages the game loop, progression rules, and interactions between subsystems.
+Points importants :
+- Le JWT est configure en dur dans `GameServerApi/Services/JwtService.cs` et `GameServerApi/Program.cs`.
+- CORS est limite a `https://csharp.nouvet.fr`, `http://localhost:3000`, `http://localhost:5173`.
+- SQLite utilise `ProjectDB.db` a la racine.
 
-- **Resource System:**  
-  Handles resource accumulation, spending, and progression values.
+## Authentification
+1. `POST /api/User/Register` ou `POST /api/User/Login`.
+2. Recuperer le `token` JWT.
+3. Ajouter `Authorization: Bearer <token>` sur les routes protegees.
 
-- **Upgrade System:**  
-  Manages upgrades that affect gameplay, such as multipliers and efficiency boosts.
+## Documentation API et SignalR
+- API complete : `docs/API.md`
+- SignalR (ChatHub) : `docs/SignalR.md`
 
-- **Achievement System:**  
-  Tracks milestones and unlocks achievements based on player actions.
+## Gameplay et progression
+- Regles de progression, formules, reset, items, revenu passif : `docs/Gameplay.md`
 
-- **Persistence:**  
-  Responsible for saving and loading player progression and state.
+## Base de donnees
+- Migrations EF Core, seed items : `docs/Database.md`
 
----
-
-## 3. Core Domain Model
-
-The core domain consists of several high-level classes:
-
-- **Game:** The main controller that manages the game loop and coordinates all subsystems.
-- **ResourceManager:** Handles resource creation, accumulation, and spending.
-- **UpgradeManager:** Controls upgrade availability and application.
-- **AchievementManager:** Tracks and unlocks achievements.
-- **Resource, Upgrade, Achievement:** Represent individual resources, upgrades, and achievements.
-
----
-## 4. Game Logic and Usage Workflow
-
-The gameplay is based on incremental mechanics where user actions and background systems
-work together to increase player progression.
-
-- The player interacts with the game through the frontend (click actions, upgrades, resets).
-- Each click increases the player’s progression score.
-- Rate limiting prevents excessive clicking and ensures fair progression.
-- Passive income periodically increases the score, even without user interaction.
-- Upgrades improve progression efficiency and resource generation.
-- Achievements are unlocked when specific milestones are reached.
-- Players can reset their progression to gain long-term benefits.
-- Game state and progression are persisted on the server and automatically restored.
-
-## 5. Video Demonstration
-
-A video demonstration of the Incremental Game can be found at the following link:
-[Watch the video demo](https://drive.google.com/file/d/16LysV0LNoWsGCyy_PP92Z3JF8Q2hkecP/view?usp=sharing)
-
----
-
-## 6. How to Build & Compile the Project
-
-### Prerequisites
-
-- .NET SDK 7.0 or later
-- Modern web browser (for frontend testing)
-
-### Build Instructions
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/H-raf0/Incremental_Game.git
-   cd Incremental_Game
-   ```
-
-2. **Restore dependencies:**
-   ```bash
-   dotnet restore
-   ```
-
-3. **Build the project (if applicable):**
-   ```bash
-   dotnet build
-   ```
-## Database Management 
-
-This project uses Entity Framework Core for database management.
-
-1. **Create a new migration:**
+## Tests
+- Lancer les tests : `docs/Testing.md`
+- Pour lancer les tests en collectant les données de couverture, utilisez l’option `--collect` :
+  ```bash
+  dotnet test --collect:"XPlat Code Coverage"
+  ```
+-   Pour générer le rapport :
     ```bash
-    dotnet ef migrations add InitialisationDeLaDB
-    ```
-2. **Apply migrations to the database**
-    ```bash
-    dotnet ef database update
+    reportgenerator -reports:TestResults/**/coverage.cobertura.xml -targetdir:coveragereport -reporttypes:Html
     ```
 
-3. **Drop the database**
-    ```bash
-    dotnet ef database drop --force
-    ```
----
+  Rapport HTML : `GameServerApi.Tests/coveragereport/index.html`
 
-## 7. How to Run and Use the Project
+## Architecture (schema)
+- Schema d'architecture : `docs/Architecture.md`
 
-### Running the API
-
-1. **Start the development server:**
-   ```bash
-   dotnet run
-   ```
-
-2. **Access the game:**
-   - Open your browser and navigate to `http://localhost:5000`.
-
----
-
-## 8. Project Structure
-
+## Structure du projet
 ```
 Incremental_Game/
 ├── GameServerApi/
 ├── GameServerApi.Tests/
-├── .tools/
+├── docs/
 ├── coveragereport/
 ├── class-diagram.png
 ├── IncrementalGame.sln
 └── README.md
-
 ```
-## Contributors
 
-[BAANI Maroia](https://github.com/briw4),  [ISMAILI M'HAMDI Mouad](https://github.com/mouadismaili),   [EL ALLALI Achraf](https://github.com/H-raf0)
+## Video demo
+[Watch the video demo](https://drive.google.com/file/d/16LysV0LNoWsGCyy_PP92Z3JF8Q2hkecP/view?usp=sharing)
+
+## Contributeurs
+[BAANI Maroia](https://github.com/briw4), [ISMAILI M'HAMDI Mouad](https://github.com/mouadismaili), [EL ALLALI Achraf](https://github.com/H-raf0)

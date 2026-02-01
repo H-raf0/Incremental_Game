@@ -99,7 +99,6 @@ namespace GameServerApi.Services
 
             // Capture previous score for the system message
             var previousCount = progression.Count;
-
             if (progression.Count > progression.BestScore)
             {
                 progression.BestScore = progression.Count;
