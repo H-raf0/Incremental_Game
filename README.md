@@ -109,4 +109,4 @@ Incremental_Game/
 [Watch the video demo](https://drive.google.com/file/d/16LysV0LNoWsGCyy_PP92Z3JF8Q2hkecP/view?usp=sharing)
 
 ## Contributeurs
-[BAANI Maroia](https://github.com/briw4), [ISMAILI M'HAMDI Mouad](https://github.com/mouadismaili), [EL ALLALI Achraf](https://github.com/H-raf0)
+[BAANI Maroia](https://github.com/briw4)(F5), [ISMAILI M'HAMDI Mouad](https://github.com/mouadismaili)(F2), [EL ALLALI Achraf](https://github.com/H-raf0)(F2)
