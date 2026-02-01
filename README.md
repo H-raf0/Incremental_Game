@@ -75,7 +75,7 @@ work together to increase player progression.
 ## 5. Video Demonstration
 
 A video demonstration of the Incremental Game can be found at the following link:
-[Watch the video demo](https://drive.google.com/drive/u/2/folders/1H2B4-ieyk8vUOfzr60JzK3XHozkGOb9S)
+[Watch the video demo](https://drive.google.com/file/d/16LysV0LNoWsGCyy_PP92Z3JF8Q2hkecP/view?usp=sharing)
 
 ---
 
