@@ -100,7 +100,6 @@ Incremental_Game/
 ├── GameServerApi.Tests/
 ├── docs/
 ├── coveragereport/
-├── class-diagram.png
 ├── IncrementalGame.sln
 └── README.md
 ```
